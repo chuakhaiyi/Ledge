@@ -22,17 +22,20 @@
                 ToolTip="Ledge — hover or click to open">
             <Grid x:Name="CollapsedGrid" ClipToBounds="False">
                 <ItemsControl x:Name="CollapsedTabs"
+                              Width="260"
+                              Height="600"
                               ItemsSource="{Binding CollapsedNotes, RelativeSource={RelativeSource AncestorType=Window}}"
-                              HorizontalAlignment="Right"
+                              HorizontalAlignment="Stretch"
                               VerticalAlignment="Center">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
-                            <StackPanel Orientation="Vertical"/>
+                            <Canvas/>
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <local:DockTab Note="{Binding}"
+                                           Index="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ItemsControl}, Converter={StaticResource ItemIndexConverter}}"
                                            PeekOnly="True"
                                            IsPeeked="{Binding IsPeeking, RelativeSource={RelativeSource AncestorType=Window}}"/>
                         </DataTemplate>

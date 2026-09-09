@@ -98,8 +98,8 @@ public partial class DockWindow : Window
             {
                 Dispatcher.Invoke(() =>
                 {
-                    UpdateLayoutForEdge();
                     UpdatePosition();
+                    UpdateLayoutForEdge();
                 });
             }
         };
@@ -109,6 +109,7 @@ public partial class DockWindow : Window
     {
         var hwnd = new WindowInteropHelper(this).Handle;
         SetWindowStyle(hwnd);
+        UpdatePosition();
         UpdateLayoutForEdge();
         Collapse();
         UpdateBindings();
@@ -147,14 +148,14 @@ public partial class DockWindow : Window
         }
         else if (edge == DockEdge.Left)
         {
-            Width = _isExpanded ? 260 : _isPeeking ? 230 : 72;
+            Width = _isExpanded ? 260 : 260;
             Height = screen.Height;
             Left = screen.Left;
             Top = screen.Top;
         }
         else // DockEdge.Right
         {
-            var width = _isExpanded ? 260 : _isPeeking ? 230 : 72;
+            var width = _isExpanded ? 260 : 260;
             Width = width;
             Height = screen.Height;
             Left = screen.Right - width;
@@ -168,9 +169,10 @@ public partial class DockWindow : Window
         if (edge == DockEdge.Top)
         {
             Height = _isExpanded ? 260 : _isPeeking ? 120 : 72;
-            SetCollapsedOrientation(Orientation.Horizontal);
             CollapsedTabs.HorizontalAlignment = HorizontalAlignment.Center;
             CollapsedTabs.VerticalAlignment = VerticalAlignment.Bottom;
+            CollapsedTabs.Width = Width;
+            CollapsedTabs.Height = Height;
             CollapsedEmptyMark.Width = 52;
             CollapsedEmptyMark.Height = 8;
             CollapsedEmptyMark.HorizontalAlignment = HorizontalAlignment.Center;
@@ -183,9 +185,10 @@ public partial class DockWindow : Window
         else if (edge == DockEdge.Left)
         {
             Height = SystemParameters.WorkArea.Height;
-            SetCollapsedOrientation(Orientation.Vertical);
             CollapsedTabs.HorizontalAlignment = HorizontalAlignment.Left;
             CollapsedTabs.VerticalAlignment = VerticalAlignment.Center;
+            CollapsedTabs.Width = Width;
+            CollapsedTabs.Height = Height;
             CollapsedEmptyMark.HorizontalAlignment = HorizontalAlignment.Left;
             CollapsedEmptyMark.VerticalAlignment = VerticalAlignment.Center;
 
@@ -196,9 +199,10 @@ public partial class DockWindow : Window
         else // Right
         {
             Height = SystemParameters.WorkArea.Height;
-            SetCollapsedOrientation(Orientation.Vertical);
             CollapsedTabs.HorizontalAlignment = HorizontalAlignment.Right;
             CollapsedTabs.VerticalAlignment = VerticalAlignment.Center;
+            CollapsedTabs.Width = Width;
+            CollapsedTabs.Height = Height;
             CollapsedEmptyMark.HorizontalAlignment = HorizontalAlignment.Right;
             CollapsedEmptyMark.VerticalAlignment = VerticalAlignment.Center;
 
@@ -206,13 +210,6 @@ public partial class DockWindow : Window
             DockScrollViewer.HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled;
             DockScrollViewer.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
         }
-    }
-
-    private void SetCollapsedOrientation(Orientation orientation)
-    {
-        var panel = new FrameworkElementFactory(typeof(StackPanel));
-        panel.SetValue(StackPanel.OrientationProperty, orientation);
-        CollapsedTabs.ItemsPanel = new ItemsPanelTemplate(panel);
     }
 
     public void Expand()
@@ -224,6 +221,7 @@ public partial class DockWindow : Window
         CollapsedView.Visibility = Visibility.Collapsed;
         ExpandedView.Visibility = Visibility.Visible;
         UpdatePosition();
+        UpdateLayoutForEdge();
         UpdateBindings();
     }
 
@@ -237,6 +235,7 @@ public partial class DockWindow : Window
         ExpandedView.Visibility = Visibility.Collapsed;
         CollapsedView.Visibility = Visibility.Visible;
         UpdatePosition();
+        UpdateLayoutForEdge();
     }
 
     private void Peek()
@@ -248,6 +247,7 @@ public partial class DockWindow : Window
         CollapsedView.Visibility = Visibility.Visible;
         ExpandedView.Visibility = Visibility.Collapsed;
         UpdatePosition();
+        UpdateLayoutForEdge();
     }
 
     private void UpdateBindings()

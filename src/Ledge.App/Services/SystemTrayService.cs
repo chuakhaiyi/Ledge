@@ -3,6 +3,7 @@ namespace Ledge.App.Services;
 using System;
 using System.Drawing;
 using System.Windows;
+using System.Windows.Threading;
 using Hardcodet.Wpf.TaskbarNotification;
 
 public sealed class SystemTrayService : IDisposable
@@ -144,28 +145,28 @@ public sealed class SystemTrayService : IDisposable
         newNote.Click += (_, _) =>
         {
             CloseContextMenu(menu);
-            _windowManager.CreateNewNote();
+            DeferTrayAction(_windowManager.CreateNewNote);
         };
 
         var allNotes = new System.Windows.Controls.MenuItem { Header = "All Notes" };
         allNotes.Click += (_, _) =>
         {
             CloseContextMenu(menu);
-            _windowManager.ShowLibrary();
+            DeferTrayAction(_windowManager.ShowLibrary);
         };
 
         var archived = new System.Windows.Controls.MenuItem { Header = "Archived" };
         archived.Click += (_, _) =>
         {
             CloseContextMenu(menu);
-            _windowManager.ShowArchive();
+            DeferTrayAction(_windowManager.ShowArchive);
         };
 
         var settings = new System.Windows.Controls.MenuItem { Header = "Settings" };
         settings.Click += (_, _) =>
         {
             CloseContextMenu(menu);
-            _windowManager.ShowSettings();
+            DeferTrayAction(_windowManager.ShowSettings);
         };
 
         var exit = new System.Windows.Controls.MenuItem { Header = "Exit" };
@@ -194,6 +195,13 @@ public sealed class SystemTrayService : IDisposable
         {
             _notifyIcon.ContextMenu = null;
         }
+    }
+
+    private static void DeferTrayAction(Action action)
+    {
+        Application.Current.Dispatcher.BeginInvoke(
+            DispatcherPriority.Background,
+            new Action(action));
     }
 
     public void Dispose()

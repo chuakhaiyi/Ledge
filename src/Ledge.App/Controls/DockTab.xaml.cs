@@ -81,6 +81,7 @@ public partial class DockTab : UserControl
         var transform = new TransformGroup();
         transform.Children.Add(new ScaleTransform(1, 1));
         transform.Children.Add(new TranslateTransform());
+        transform.Children.Add(new RotateTransform());
         return transform;
     }
 
@@ -128,12 +129,14 @@ public partial class DockTab : UserControl
             return;
         }
 
-        Width = IsPeeked ? 112 : 14;
-        MinHeight = 28;
-        Margin = new Thickness(0, -7, 0, -7);
+        Width = 216;
+        Height = 58;
+        MinHeight = 58;
+        Margin = new Thickness(0, -10, 0, 0);
         TabBorder.Visibility = Visibility.Collapsed;
         PeekBorder.Visibility = Visibility.Visible;
         PeekLabel.Visibility = IsPeeked ? Visibility.Visible : Visibility.Collapsed;
+        SetStackTransform(IsPeeked ? 112 : 198, false);
     }
 
     private void UpdateVisuals(Note note)
@@ -190,13 +193,12 @@ public partial class DockTab : UserControl
 
     private void TabBorder_MouseEnter(object sender, MouseEventArgs e)
     {
+        Panel.SetZIndex(this, 100);
         if (PeekOnly)
         {
             TabBorder.Visibility = Visibility.Visible;
             PeekBorder.Visibility = Visibility.Collapsed;
-            Width = 220;
-            MinHeight = 56;
-            Margin = new Thickness(0, 3, 0, 3);
+            PeekLabel.Visibility = Visibility.Collapsed;
         }
 
         AnimateHover(true);
@@ -213,6 +215,7 @@ public partial class DockTab : UserControl
         {
             ApplyPeekLayout();
         }
+        Panel.SetZIndex(this, 0);
     }
 
     private void AnimateHover(bool isHovered)
@@ -221,23 +224,48 @@ public partial class DockTab : UserControl
             ? new Duration(TimeSpan.FromMilliseconds(180))
             : new Duration(TimeSpan.Zero);
         var easing = new CubicEase { EasingMode = EasingMode.EaseOut };
-        var targetScale = isHovered ? 1.025 : 1.0;
-        var targetOffset = isHovered ? -2.0 : 0.0;
+        var targetScale = isHovered ? 1.0 : 1.0;
+        var targetOffset = isHovered ? 0.0 : 0.0;
+        var targetX = PeekOnly ? (isHovered ? 0.0 : IsPeeked ? 112.0 : 198.0) : 0.0;
+        var targetY = PeekOnly ? Index * 14.0 : 0.0;
+        var targetRotation = PeekOnly && !isHovered ? Index * -2.2 : 0.0;
 
         foreach (var border in new[] { TabBorder, PeekBorder })
         {
             var group = (TransformGroup)border.RenderTransform;
             var scale = (ScaleTransform)group.Children[0];
             var translate = (TranslateTransform)group.Children[1];
+            var rotate = (RotateTransform)group.Children[2];
             scale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(targetScale, duration) { EasingFunction = easing });
             scale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(targetScale, duration) { EasingFunction = easing });
-            translate.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(targetOffset, duration) { EasingFunction = easing });
+            translate.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(targetX, duration) { EasingFunction = easing });
+            translate.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(targetY + targetOffset, duration) { EasingFunction = easing });
+            rotate.BeginAnimation(RotateTransform.AngleProperty, new DoubleAnimation(targetRotation, duration) { EasingFunction = easing });
         }
 
         TabShadow.BeginAnimation(DropShadowEffect.OpacityProperty,
             new DoubleAnimation(isHovered ? 0.28 : 0.15, duration) { EasingFunction = easing });
         TabShadow.BeginAnimation(DropShadowEffect.BlurRadiusProperty,
             new DoubleAnimation(isHovered ? 16 : 8, duration) { EasingFunction = easing });
+    }
+
+    private void SetStackTransform(double x, bool animate)
+    {
+        var duration = animate && SystemParameters.ClientAreaAnimation
+            ? new Duration(TimeSpan.FromMilliseconds(260))
+            : new Duration(TimeSpan.Zero);
+        var easing = new CubicEase { EasingMode = EasingMode.EaseOut };
+
+        foreach (var border in new[] { TabBorder, PeekBorder })
+        {
+            var group = (TransformGroup)border.RenderTransform;
+            var translate = (TranslateTransform)group.Children[1];
+            var rotate = (RotateTransform)group.Children[2];
+            translate.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(x, duration) { EasingFunction = easing });
+            translate.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(Index * 14, duration) { EasingFunction = easing });
+            rotate.BeginAnimation(RotateTransform.AngleProperty,
+                new DoubleAnimation(x == 0 ? 0 : Index * -2.2, duration) { EasingFunction = easing });
+        }
     }
 
     public void SetKeyboardHighlight(bool highlight)
