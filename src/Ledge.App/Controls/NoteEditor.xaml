@@ -1,0 +1,109 @@
+<UserControl x:Class="Ledge.App.Controls.NoteEditor"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:Ledge.App.Controls">
+
+    <Border Background="{StaticResource BackgroundBrush}"
+            CornerRadius="8"
+            BorderBrush="{StaticResource BorderBrush}"
+            BorderThickness="1">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="30"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Titlebar -->
+            <Border Grid.Row="0" Background="{StaticResource OverlayBrush}" CornerRadius="8,8,0,0">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Traffic light dots -->
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="10,0" VerticalAlignment="Center">
+                        <Ellipse Style="{StaticResource TitlebarDot}"/>
+                        <Ellipse Style="{StaticResource TitlebarDot}"/>
+                    </StackPanel>
+
+                    <!-- Color picker -->
+                    <Button Grid.Column="2"
+                            x:Name="ColorButton"
+                            Style="{StaticResource IconButton}"
+                            Click="ColorButton_Click"
+                            ToolTip="Change color (Ctrl+.)">
+                        <Grid Width="20" Height="20">
+                            <Ellipse x:Name="ColorIndicator" Fill="#C7D2B8" Stroke="{StaticResource BorderBrush}" StrokeThickness="1"/>
+                            <Path Data="M0,0 L4,4 L8,0" Stroke="{StaticResource SecondaryTextBrush}" StrokeThickness="1.5" VerticalAlignment="Bottom" Margin="0,0,0,2"/>
+                        </Grid>
+                        <Button.ContextMenu>
+                            <ContextMenu x:Name="ColorPopup" PlacementTarget="{Binding ElementName=ColorButton}" Placement="Bottom">
+                                <ContextMenu.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <UniformGrid Rows="1" Columns="8"/>
+                                    </ItemsPanelTemplate>
+                                </ContextMenu.ItemsPanel>
+                                <ContextMenu.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Width="28" Height="28" Margin="4" CornerRadius="4" Background="{Binding ColorBrush}"
+                                                BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                                                Cursor="Hand" ToolTip="{Binding ColorName}"
+                                                MouseLeftButtonDown="ColorChip_Click">
+                                        </Border>
+                                    </DataTemplate>
+                                </ContextMenu.ItemTemplate>
+                            </ContextMenu>
+                        </Button.ContextMenu>
+                    </Button>
+                </Grid>
+            </Border>
+
+            <!-- Editor -->
+            <TextBox x:Name="TextBox"
+                     Grid.Row="1"
+                     Style="{StaticResource NoteTextBox}"
+                     TextChanged="TextBox_TextChanged"
+                     Margin="18,18,18,14"
+                     MinHeight="130"
+                     AcceptsReturn="True"
+                     SpellCheck.IsEnabled="True"
+                     FontFamily="{StaticResource UIFont}"
+                     FontSize="15"
+                     Foreground="{StaticResource PrimaryTextBrush}"/>
+
+            <!-- Footer -->
+            <Grid Grid.Row="2" Margin="18,0,18,14">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock x:Name="TimestampText"
+                           Grid.Column="0"
+                           Style="{StaticResource TimestampText}"
+                           VerticalAlignment="Center"
+                           Text="edited just now"/>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center">
+                    <Ellipse x:Name="PinDot" Width="6" Height="6" Fill="{StaticResource AccentBrush}"
+                             VerticalAlignment="Center" Margin="0,0,5,0" Visibility="Collapsed"/>
+                    <TextBlock x:Name="PinText"
+                               Style="{StaticResource TimestampText}"
+                               Text="pinned"
+                               Visibility="Collapsed"/>
+                </StackPanel>
+
+                <Button Grid.Column="2"
+                        Style="{StaticResource IconButton}"
+                        Click="DeleteButton_Click"
+                        ToolTip="Delete (Ctrl+Backspace)">
+                    <Path Data="M0,0 L12,12 M12,0 L0,12" Stroke="{StaticResource SecondaryTextBrush}" StrokeThickness="1.5" Width="12" Height="12"/>
+                </Button>
+            </Grid>
+        </Grid>
+    </Border>
+</UserControl>

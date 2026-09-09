@@ -1,0 +1,108 @@
+<Window x:Class="Ledge.App.Windows.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Ledge.App.Controls"
+        xmlns:models="clr-namespace:Ledge.Core.Models;assembly=Ledge.Core"
+        Title="Ledge — Settings"
+        Width="480" Height="520"
+        MinWidth="440" MinHeight="480"
+        WindowStyle="SingleBorderWindow"
+        ResizeMode="CanResizeWithGrip"
+        Background="{StaticResource BackgroundBrush}"
+        Loaded="Window_Loaded"
+        KeyDown="Window_KeyDown">
+    <Window.Resources>
+        <local:EnumToListConverter x:Key="EnumToListConverter"/>
+    </Window.Resources>
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Title -->
+        <TextBlock Grid.Row="0"
+                   Text="Settings"
+                   Style="{StaticResource DisplayText}"
+                   FontSize="26"
+                   Margin="0,0,0,24"/>
+
+        <!-- Tab Control -->
+        <TabControl Grid.Row="1" Style="{StaticResource SettingsTabControl}">
+            <TabItem Header="General">
+                <StackPanel Margin="8">
+                    <CheckBox Content="Start with Windows"
+                              IsChecked="{Binding StartWithWindows, Mode=TwoWay}"
+                              Style="{StaticResource SettingsCheckBox}"
+                              Margin="0,0,0,12"/>
+
+                    <CheckBox Content="Portable mode (store data next to .exe)"
+                              IsChecked="{Binding PortableMode, Mode=TwoWay}"
+                              Style="{StaticResource SettingsCheckBox}"
+                              Margin="0,0,0,12"/>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                        <TextBlock Text="Dock edge:" Style="{StaticResource UIText}" VerticalAlignment="Center" Width="100"/>
+                        <ComboBox ItemsSource="{Binding Source={x:Static models:DockEdge.Left}, Converter={StaticResource EnumToListConverter}}"
+                                  SelectedItem="{Binding DockEdge, Mode=TwoWay}"
+                                  Width="140"
+                                  Style="{StaticResource SettingsComboBox}"/>
+                    </StackPanel>
+
+                    <Button Content="Open data folder"
+                            Style="{StaticResource PrimaryButton}"
+                            HorizontalAlignment="Left"
+                            Margin="0,24,0,0"
+                            Click="OpenDataFolder_Click"/>
+                </StackPanel>
+            </TabItem>
+
+            <TabItem Header="Appearance">
+                <StackPanel Margin="8">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                        <TextBlock Text="Theme:" Style="{StaticResource UIText}" VerticalAlignment="Center" Width="100"/>
+                        <ComboBox ItemsSource="{Binding Source={x:Static models:AppTheme.System}, Converter={StaticResource EnumToListConverter}}"
+                                  SelectedItem="{Binding Theme, Mode=TwoWay}"
+                                  Width="140"
+                                  Style="{StaticResource SettingsComboBox}"/>
+                    </StackPanel>
+
+                    <CheckBox Content="Show dock only on hover"
+                              IsChecked="{Binding ShowDockOnHover, Mode=TwoWay}"
+                              Style="{StaticResource SettingsCheckBox}"
+                              Margin="0,12,0,0"/>
+                </StackPanel>
+            </TabItem>
+
+            <TabItem Header="Hotkeys">
+                <StackPanel Margin="8">
+                    <local:HotkeyEditor Label="New note" Hotkey="{Binding NewNoteHotkey, Mode=TwoWay}" Margin="0,0,0,12"/>
+                    <local:HotkeyEditor Label="All notes" Hotkey="{Binding LibraryHotkey, Mode=TwoWay}" Margin="0,0,0,12"/>
+                    <local:HotkeyEditor Label="Archived" Hotkey="{Binding ArchiveHotkey, Mode=TwoWay}" Margin="0,0,0,12"/>
+                    <local:HotkeyEditor Label="Focus dock" Hotkey="{Binding FocusDockHotkey, Mode=TwoWay}" Margin="0,0,0,12"/>
+                </StackPanel>
+            </TabItem>
+
+            <TabItem Header="Advanced">
+                <StackPanel Margin="8">
+                    <TextBlock Text="Data location:" Style="{StaticResource UIText}" Margin="0,0,0,8"/>
+                    <TextBlock x:Name="DataPathText" Style="{StaticResource SecondaryText}" TextWrapping="Wrap" Margin="0,0,0,24"/>
+
+                    <Button Content="Reset all settings"
+                            Style="{StaticResource PrimaryButton}"
+                            HorizontalAlignment="Left"
+                            Click="ResetSettings_Click"/>
+                </StackPanel>
+            </TabItem>
+        </TabControl>
+
+        <!-- Close button -->
+        <Button Grid.Row="2"
+                Content="Done"
+                Style="{StaticResource PrimaryButton}"
+                HorizontalAlignment="Right"
+                Margin="0,16,0,0"
+                Click="Done_Click"/>
+    </Grid>
+</Window>

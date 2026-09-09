@@ -1,0 +1,124 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:local="clr-namespace:Ledge.App.Controls"
+                    xmlns:models="clr-namespace:Ledge.Core.Models;assembly=Ledge.Core">
+
+    <!-- Converters -->
+    <local:ItemIndexConverter x:Key="ItemIndexConverter"/>
+    <local:EnumToListConverter x:Key="EnumToListConverter"/>
+
+    <!-- Dock Tab Template -->
+    <DataTemplate x:Key="DockTabTemplate">
+        <local:DockTab Note="{Binding}"
+                       Index="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ItemsControl}, Converter={StaticResource ItemIndexConverter}}"
+                       IsPinned="{Binding Pinned}"/>
+    </DataTemplate>
+
+    <!-- Color Chip for Palette -->
+    <DataTemplate x:Key="ColorChipTemplate" DataType="{x:Type local:ColorChip}">
+        <Border Width="24" Height="24"
+                CornerRadius="4"
+                Background="{Binding ColorBrush}"
+                BorderBrush="{StaticResource BorderBrush}"
+                BorderThickness="1"
+                ToolTip="{Binding ColorName}"
+                Cursor="Hand">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                            <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                            <Setter Property="BorderThickness" Value="2"/>
+                            <Setter Property="Effect">
+                                <Setter.Value>
+                                    <DropShadowEffect Color="{StaticResource AccentColor}" BlurRadius="4" ShadowDepth="0" Opacity="0.6"/>
+                                </Setter.Value>
+                            </Setter>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+        </Border>
+    </DataTemplate>
+
+    <!-- Note Row for Library -->
+    <DataTemplate x:Key="NoteRowTemplate">
+        <Grid Height="44">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <Ellipse Grid.Column="0"
+                     Width="10" Height="10"
+                     Margin="0,0,12,0"
+                     VerticalAlignment="Center"
+                     Fill="{Binding ColorBrush}"/>
+
+            <TextBlock Grid.Column="1"
+                       Text="{Binding PreviewText}"
+                       Style="{StaticResource UIText}"
+                       FontSize="14"
+                       VerticalAlignment="Center"
+                       TextTrimming="CharacterEllipsis"/>
+
+            <TextBlock Grid.Column="2"
+                       Text="{Binding MetaText}"
+                       Style="{StaticResource SecondaryText}"
+                       VerticalAlignment="Center"
+                       Margin="12,0,0,0"/>
+        </Grid>
+    </DataTemplate>
+
+    <!-- Section Header -->
+    <DataTemplate x:Key="SectionHeaderTemplate">
+        <DockPanel Margin="0,6,0,4">
+            <TextBlock Text="{Binding Title}"
+                       Style="{StaticResource SecondaryText}"
+                       FontSize="12"
+                       FontWeight="SemiBold"
+                       Foreground="{StaticResource AshColor}"/>
+            <Separator Style="{StaticResource SectionSeparator}" DockPanel.Dock="Bottom"/>
+        </DockPanel>
+    </DataTemplate>
+
+    <!-- Toast Notification -->
+    <DataTemplate x:Key="ToastTemplate">
+        <Border Background="{StaticResource SuccessBrush}"
+                CornerRadius="8"
+                Padding="16,12"
+                MinWidth="280"
+                Effect="{StaticResource ShadowEffect}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0"
+                           Text="{Binding Message}"
+                           Foreground="White"
+                           FontFamily="{StaticResource UIFont}"
+                           FontSize="13"
+                           VerticalAlignment="Center"/>
+
+                <Button Grid.Column="1"
+                        Content="Undo"
+                        Style="{StaticResource IconButton}"
+                        Foreground="White"
+                        FontWeight="Medium"
+                        Padding="12,6"
+                        Margin="12,0,0,0"
+                        Command="{Binding UndoCommand}"/>
+            </Grid>
+        </Border>
+    </DataTemplate>
+
+    <!-- Shadow Effect for Toasts -->
+    <DropShadowEffect x:Key="ShadowEffect"
+                      Color="#000000"
+                      BlurRadius="12"
+                      ShadowDepth="4"
+                      Opacity="0.3"/>
+</ResourceDictionary>

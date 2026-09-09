@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Ledge — library window mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500&display=swap" rel="stylesheet">
+<link href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'General Sans', sans-serif;
+    background:linear-gradient(160deg,#2B2E35 0%, #1B1D22 65%);
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:40px;
+  }
+  .caption{
+    position:fixed;
+    top:28px;
+    left:40px;
+    color:#8A8D91;
+    font-size:13px;
+  }
+  .caption b{color:#EAE6DC;font-family:'Fraunces',serif;font-weight:500;font-size:16px;display:block;margin-bottom:4px;}
+
+  .window{
+    width:620px;
+    background:#EAE6DC;
+    border-radius:8px;
+    box-shadow:0 40px 90px rgba(0,0,0,0.45);
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+  }
+  .titlebar{
+    height:32px;
+    display:flex;
+    align-items:center;
+    padding:0 14px;
+    background:rgba(27,29,34,0.04);
+  }
+  .titlebar .dots span{
+    width:8px;height:8px;border-radius:50%;
+    background:rgba(27,29,34,0.22);
+    display:inline-block;
+    margin-right:6px;
+  }
+  .content{
+    display:flex;
+    padding:26px 28px 30px;
+  }
+  .edge-rule{
+    width:1px;
+    background:rgba(138,141,145,0.35);
+    margin-right:24px;
+  }
+  main{flex:1;}
+  h1{
+    font-family:'Fraunces',serif;
+    font-weight:500;
+    font-size:26px;
+    margin:0 0 18px 0;
+    color:#1B1D22;
+  }
+  .search{
+    width:100%;
+    border:1px solid rgba(27,29,34,0.15);
+    background:#F3F0E8;
+    border-radius:6px;
+    padding:8px 12px;
+    font-size:13px;
+    color:#8A8D91;
+    margin-bottom:26px;
+  }
+  h2{
+    font-size:12px;
+    font-weight:600;
+    color:#8A8D91;
+    margin:0 0 10px 0;
+    padding-bottom:6px;
+    border-bottom:1px solid rgba(138,141,145,0.2);
+  }
+  .row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:9px 0;
+    font-size:14px;
+    color:#1B1D22;
+  }
+  .row .left{display:flex;align-items:center;gap:10px;}
+  .dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+  .row .meta{font-size:11px;color:#8A8D91;}
+  section{margin-bottom:22px;}
+  .archived-count{color:#8A8D91;font-size:13px;}
+</style>
+</head>
+<body>
+  <div class="caption"><b>The library</b>Every note in one place — search, sort, archive without losing anything</div>
+  <div class="window">
+    <div class="titlebar"><div class="dots"><span></span><span></span><span></span></div></div>
+    <div class="content">
+      <div class="edge-rule"></div>
+      <main>
+        <h1>Your notes</h1>
+        <div class="search">Search notes</div>
+
+        <section>
+          <h2>Pinned</h2>
+          <div class="row">
+            <div class="left"><span class="dot" style="background:#C7D2B8"></span>Call the vet before 5</div>
+            <div class="meta">moss · today</div>
+          </div>
+        </section>
+
+        <section>
+          <h2>Notes</h2>
+          <div class="row">
+            <div class="left"><span class="dot" style="background:#F0DFAE"></span>Groceries</div>
+            <div class="meta">butter · yesterday</div>
+          </div>
+          <div class="row">
+            <div class="left"><span class="dot" style="background:#BFD2D6"></span>Standup talking points</div>
+            <div class="meta">sky · 3 days ago</div>
+          </div>
+          <div class="row">
+            <div class="left"><span class="dot" style="background:#E7C3AE"></span>Ideas for the trip</div>
+            <div class="meta">clay · last week</div>
+          </div>
+        </section>
+
+        <section>
+          <h2>Archived</h2>
+          <div class="archived-count">3 notes, out of the way but not gone</div>
+        </section>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

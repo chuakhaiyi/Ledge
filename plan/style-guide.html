@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Ledge — style guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&display=swap" rel="stylesheet">
+<link href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1B1D22;
+    --paper:#EAE6DC;
+    --copper:#B5642C;
+    --pine:#4B5A45;
+    --ash:#8A8D91;
+    --paper-hi:#F3F0E8;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'General Sans', sans-serif;
+    display:flex;
+  }
+  .rule{
+    width:1px;
+    background:rgba(138,141,145,0.35);
+    align-self:stretch;
+    margin:0 48px;
+  }
+  main{
+    max-width:760px;
+    padding:64px 48px 64px 0;
+  }
+  .wordmark{
+    font-family:'Fraunces', serif;
+    font-size:42px;
+    font-weight:500;
+    margin:0 0 4px 0;
+  }
+  .kicker{
+    color:var(--ash);
+    margin:0 0 56px 0;
+    font-size:15px;
+  }
+  h2{
+    font-size:13px;
+    font-weight:600;
+    text-transform:none;
+    letter-spacing:0.01em;
+    color:var(--ash);
+    margin:0 0 20px 0;
+    padding-bottom:10px;
+    border-bottom:1px solid rgba(138,141,145,0.25);
+  }
+  section{margin-bottom:56px;}
+
+  .swatches{
+    display:grid;
+    grid-template-columns:repeat(5,1fr);
+    gap:16px;
+  }
+  .swatch{
+    border-radius:10px;
+    overflow:hidden;
+    border:1px solid rgba(27,29,34,0.08);
+  }
+  .swatch .fill{height:64px;}
+  .swatch .label{
+    background:var(--paper-hi);
+    padding:10px 12px;
+    font-size:13px;
+  }
+  .swatch .label b{display:block;font-weight:600;}
+  .swatch .label span{color:var(--ash);font-size:12px;}
+
+  .type-row{
+    display:flex;
+    align-items:baseline;
+    gap:24px;
+    padding:18px 0;
+    border-bottom:1px solid rgba(138,141,145,0.18);
+  }
+  .type-row .tag{
+    width:120px;
+    flex-shrink:0;
+    font-size:12px;
+    color:var(--ash);
+  }
+  .type-row .sample.display{font-family:'Fraunces',serif;font-weight:500;}
+  .type-row .sample.ui{font-family:'General Sans',sans-serif;}
+
+  .notes-palette{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:12px;
+  }
+  .chip{
+    border-radius:8px;
+    padding:14px 14px 12px;
+    font-size:12px;
+    color:rgba(27,29,34,0.6);
+  }
+  .chip b{display:block;color:var(--ink);font-size:13px;font-weight:600;margin-bottom:20px;}
+
+  .motif{
+    display:flex;
+    gap:0;
+    align-items:stretch;
+    height:120px;
+    border-radius:10px;
+    overflow:hidden;
+    border:1px solid rgba(27,29,34,0.08);
+  }
+  .motif .edge{width:6px;background:var(--copper);}
+  .motif .content{
+    flex:1;
+    background:var(--paper-hi);
+    padding:16px 20px;
+    font-size:13px;
+    color:var(--ash);
+    display:flex;
+    align-items:center;
+  }
+</style>
+</head>
+<body>
+  <div class="rule"></div>
+  <main>
+    <div class="wordmark">Ledge</div>
+    <p class="kicker">Design system — palette, type, and the recurring edge motif</p>
+
+    <section>
+      <h2>Chrome palette</h2>
+      <div class="swatches">
+        <div class="swatch">
+          <div class="fill" style="background:#1B1D22"></div>
+          <div class="label"><b>Ink</b><span>#1B1D22</span></div>
+        </div>
+        <div class="swatch">
+          <div class="fill" style="background:#EAE6DC"></div>
+          <div class="label"><b>Paper</b><span>#EAE6DC</span></div>
+        </div>
+        <div class="swatch">
+          <div class="fill" style="background:#B5642C"></div>
+          <div class="label"><b>Copper</b><span>#B5642C</span></div>
+        </div>
+        <div class="swatch">
+          <div class="fill" style="background:#4B5A45"></div>
+          <div class="label"><b>Pine</b><span>#4B5A45</span></div>
+        </div>
+        <div class="swatch">
+          <div class="fill" style="background:#8A8D91"></div>
+          <div class="label"><b>Ash</b><span>#8A8D91</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Type</h2>
+      <div class="type-row">
+        <div class="tag">Display / Fraunces</div>
+        <div class="sample display" style="font-size:34px;">Your notes</div>
+      </div>
+      <div class="type-row">
+        <div class="tag">UI / General Sans</div>
+        <div class="sample ui" style="font-size:16px;">Call the vet before 5</div>
+      </div>
+      <div class="type-row">
+        <div class="tag">UI small / Ash</div>
+        <div class="sample ui" style="font-size:12px;color:var(--ash);">moss · today</div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Note colors</h2>
+      <div class="notes-palette">
+        <div class="chip" style="background:#F0DFAE;"><b>Butter</b></div>
+        <div class="chip" style="background:#E7C3AE;"><b>Clay</b></div>
+        <div class="chip" style="background:#C7D2B8;"><b>Moss</b></div>
+        <div class="chip" style="background:#BFD2D6;"><b>Sky</b></div>
+        <div class="chip" style="background:#E3C6C6;"><b>Blush</b></div>
+        <div class="chip" style="background:#C7CBD1;"><b>Slate</b></div>
+        <div class="chip" style="background:#DED3BD;"><b>Sand</b></div>
+        <div class="chip" style="background:#B9BCC2;"><b>Ink</b></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>The edge motif</h2>
+      <div class="motif">
+        <div class="edge"></div>
+        <div class="content">One vertical line, standing for the screen edge the app lives on — used the same way in the dock's silhouette and every window's left margin.</div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

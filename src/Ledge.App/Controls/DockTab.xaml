@@ -1,0 +1,98 @@
+<UserControl x:Class="Ledge.App.Controls.DockTab"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Width="216" Height="58"
+             ClipToBounds="False">
+    <UserControl.Resources>
+        <Storyboard x:Key="PeekAnimation">
+            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(TranslateTransform.X)"
+                             Duration="0:0:0.32"
+                             EasingFunction="{StaticResource PeekEasing}"/>
+            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[1].(RotateTransform.Angle)"
+                             Duration="0:0:0.32"
+                             EasingFunction="{StaticResource PeekEasing}"/>
+            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[2].(ScaleTransform.ScaleX)"
+                             Duration="0:0:0.32"
+                             EasingFunction="{StaticResource PeekEasing}"/>
+        </Storyboard>
+
+        <Storyboard x:Key="CollapseAnimation">
+            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(TranslateTransform.X)"
+                             Duration="0:0:0.25"
+                             EasingFunction="{StaticResource CollapseEasing}"/>
+            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[1].(RotateTransform.Angle)"
+                             Duration="0:0:0.25"
+                             EasingFunction="{StaticResource CollapseEasing}"/>
+        </Storyboard>
+    </UserControl.Resources>
+
+    <Border x:Name="TabBorder"
+            Background="{Binding ColorBrush}"
+            CornerRadius="10,0,0,10"
+            RenderTransformOrigin="Right,Center"
+            BorderThickness="0"
+            MouseLeftButtonDown="TabBorder_MouseLeftButtonDown"
+            MouseEnter="TabBorder_MouseEnter"
+            MouseLeave="TabBorder_MouseLeave">
+        <Border.RenderTransform>
+            <TransformGroup>
+                <TranslateTransform X="198" Y="0"/>
+                <RotateTransform Angle="0" CenterX="216" CenterY="29"/>
+                <ScaleTransform ScaleX="1" ScaleY="1" CenterX="216" CenterY="29"/>
+            </TransformGroup>
+        </Border.RenderTransform>
+
+        <Border.Effect>
+            <DropShadowEffect Color="#000000" BlurRadius="16" ShadowDepth="6" Opacity="0.35" Direction="-90"/>
+        </Border.Effect>
+
+        <Grid>
+            <!-- Pinned indicator -->
+            <Ellipse x:Name="PinnedDot"
+                     Width="8" Height="8"
+                     Fill="{StaticResource AccentBrush}"
+                     HorizontalAlignment="Left"
+                     VerticalAlignment="Top"
+                     Margin="8,8,0,0"
+                     Visibility="Collapsed"/>
+
+            <!-- Word peek (state 2) -->
+            <TextBlock x:Name="PeekWord"
+                       Text="{Binding FirstWord}"
+                       FontFamily="{StaticResource UIFont}"
+                       FontSize="12"
+                       FontWeight="Medium"
+                       Foreground="#1B1D22"
+                       Opacity="0"
+                       HorizontalAlignment="Left"
+                       VerticalAlignment="Center"
+                       Margin="16,0,0,0"/>
+
+            <!-- Full note content (state 3) -->
+            <Grid x:Name="FullContent"
+                  Opacity="0"
+                  Margin="14,8">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <TextBlock x:Name="FullText"
+                           Text="{Binding Text}"
+                           FontFamily="{StaticResource UIFont}"
+                           FontSize="13"
+                           Foreground="#1B1D22"
+                           LineHeight="17.5"
+                           TextWrapping="Wrap"
+                           MaxWidth="180"/>
+                <TextBlock x:Name="FullMeta"
+                           Grid.Row="1"
+                           Text="{Binding MetaText}"
+                           FontFamily="{StaticResource UIFont}"
+                           FontSize="11"
+                           Foreground="#1B1D22"
+                           Opacity="0.5"
+                           Margin="0,8,0,0"/>
+            </Grid>
+        </Grid>
+    </Border>
+</UserControl>

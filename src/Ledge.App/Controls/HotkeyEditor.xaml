@@ -1,0 +1,42 @@
+<UserControl x:Class="Ledge.App.Controls.HotkeyEditor"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:Ledge.Core.Models">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <TextBlock Grid.Column="0"
+                   Text="{Binding Label}"
+                   Style="{StaticResource UIText}"
+                   VerticalAlignment="Center"
+                   Width="100"/>
+
+        <Grid Grid.Column="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBox x:Name="HotkeyTextBox"
+                     Grid.Column="0"
+                     Style="{StaticResource SearchBox}"
+                     IsReadOnly="True"
+                     Padding="12,8"
+                     Text="{Binding Hotkey.DisplayString, Mode=OneWay}"
+                     PreviewKeyDown="HotkeyTextBox_PreviewKeyDown"
+                     GotFocus="HotkeyTextBox_GotFocus"
+                     LostFocus="HotkeyTextBox_LostFocus"/>
+
+            <Button Grid.Column="1"
+                    Content="Clear"
+                    Style="{StaticResource IconButton}"
+                    Padding="8,4"
+                    Margin="8,0,0,0"
+                    Visibility="{Binding Hotkey.IsEmpty, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=inverse}"
+                    Click="ClearButton_Click"/>
+        </Grid>
+    </Grid>
+</UserControl>
