@@ -225,6 +225,7 @@ public partial class DockTab : UserControl
 
     private void TabBorder_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
+        AnimatePress(true);
         if (Note != null)
         {
             TabClicked?.Invoke(Note);
@@ -232,6 +233,11 @@ public partial class DockTab : UserControl
             windowManager.ShowNoteWindow(Note);
             e.Handled = true;
         }
+    }
+
+    private void TabBorder_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        AnimatePress(false);
     }
 
     private void TabBorder_MouseEnter(object sender, MouseEventArgs e)
@@ -253,6 +259,7 @@ public partial class DockTab : UserControl
 
     private void TabBorder_MouseLeave(object sender, MouseEventArgs e)
     {
+        AnimatePress(false);
         AnimateHover(false);
         if (PeekOnly)
         {
@@ -267,7 +274,7 @@ public partial class DockTab : UserControl
             ? new Duration(TimeSpan.FromMilliseconds(180))
             : new Duration(TimeSpan.Zero);
         var easing = new CubicEase { EasingMode = EasingMode.EaseOut };
-        var targetScale = isHovered ? 1.0 : 1.0;
+        var targetScale = isHovered ? 1.015 : 1.0;
         var targetOffset = isHovered ? 0.0 : 0.0;
         var targetX = PeekOnly ? (isHovered ? 0.0 : GetRestingOffset(IsPeeked)) : 0.0;
         var targetY = PeekOnly ? Index * 14.0 : 0.0;
@@ -292,6 +299,25 @@ public partial class DockTab : UserControl
             new DoubleAnimation(isHovered ? 0.28 : 0.15, duration) { EasingFunction = easing });
         TabShadow.BeginAnimation(DropShadowEffect.BlurRadiusProperty,
             new DoubleAnimation(isHovered ? 16 : 8, duration) { EasingFunction = easing });
+    }
+
+    private void AnimatePress(bool isPressed)
+    {
+        var duration = SystemParameters.ClientAreaAnimation
+            ? new Duration(TimeSpan.FromMilliseconds(isPressed ? 70 : 140))
+            : new Duration(TimeSpan.Zero);
+        var easing = new CubicEase { EasingMode = EasingMode.EaseOut };
+        var targetScale = isPressed ? 0.975 : IsMouseOver ? 1.015 : 1.0;
+
+        foreach (var border in new[] { TabBorder, PeekBorder })
+        {
+            var group = (TransformGroup)border.RenderTransform;
+            var scale = (ScaleTransform)group.Children[0];
+            scale.BeginAnimation(ScaleTransform.ScaleXProperty,
+                new DoubleAnimation(targetScale, duration) { EasingFunction = easing });
+            scale.BeginAnimation(ScaleTransform.ScaleYProperty,
+                new DoubleAnimation(targetScale, duration) { EasingFunction = easing });
+        }
     }
 
     private void SetStackTransform(double x, bool peeked, bool animate)

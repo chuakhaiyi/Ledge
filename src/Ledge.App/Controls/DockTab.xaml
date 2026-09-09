@@ -12,7 +12,8 @@
             BorderBrush="{StaticResource BorderBrush}"
             BorderThickness="1"
             Padding="16,12"
-            MouseLeftButtonDown="TabBorder_MouseLeftButtonDown"
+            PreviewMouseLeftButtonDown="TabBorder_MouseLeftButtonDown"
+            PreviewMouseLeftButtonUp="TabBorder_MouseLeftButtonUp"
             MouseEnter="TabBorder_MouseEnter"
             MouseLeave="TabBorder_MouseLeave">
         <Border.Effect>
@@ -88,7 +89,8 @@
             BorderBrush="{StaticResource BorderBrush}"
             BorderThickness="1"
             Visibility="Collapsed"
-            MouseLeftButtonDown="TabBorder_MouseLeftButtonDown"
+            PreviewMouseLeftButtonDown="TabBorder_MouseLeftButtonDown"
+            PreviewMouseLeftButtonUp="TabBorder_MouseLeftButtonUp"
             MouseEnter="TabBorder_MouseEnter"
             MouseLeave="TabBorder_MouseLeave">
         <TextBlock x:Name="PeekLabel"
