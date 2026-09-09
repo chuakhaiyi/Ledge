@@ -9,6 +9,7 @@
         MouseEnter="Window_MouseEnter"
         MouseLeave="Window_MouseLeave"
         MouseLeftButtonDown="Window_MouseLeftButtonDown"
+        SizeChanged="Window_SizeChanged"
         SourceInitialized="Window_SourceInitialized">
     <Window.Resources>
         <local:NoteToDockTabConverter x:Key="NoteToTabConverter"/>

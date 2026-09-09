@@ -295,6 +295,13 @@ public partial class DockWindow : Window
 
     private void PositionCollapsedItems()
     {
+        if (!IsLoaded || ActualWidth <= 0 || ActualHeight <= 0)
+        {
+            return;
+        }
+
+        CollapsedTabs.Width = ActualWidth;
+        CollapsedTabs.Height = ActualHeight;
         CollapsedTabs.UpdateLayout();
         var count = CollapsedTabs.Items.Count;
         if (count == 0)
@@ -327,6 +334,15 @@ public partial class DockWindow : Window
                 Canvas.SetTop(container, Math.Max(0, (ActualHeight - totalHeight) / 2 + index * cardSpacing));
             }
         }
+
+    }
+
+    private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            if (!_isExpanded)
+            {
+                Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(PositionCollapsedItems));
+            }
     }
 
     private void Window_MouseEnter(object sender, MouseEventArgs e)

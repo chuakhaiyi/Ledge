@@ -289,7 +289,7 @@
     </Style>
 
     <!-- Settings CheckBox -->
-    <Style x:Key="SettingsCheckBox" TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
+    <Style x:Key="SettingsCheckBox" TargetType="CheckBox">
         <Setter Property="FontFamily" Value="{StaticResource UIFont}"/>
         <Setter Property="FontSize" Value="13"/>
         <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}"/>

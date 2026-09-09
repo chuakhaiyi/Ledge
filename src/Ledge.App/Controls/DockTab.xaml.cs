@@ -150,6 +150,16 @@ public partial class DockTab : UserControl
         return peeked ? 112 : 198;
     }
 
+    private double GetRestingVerticalOffset(bool peeked)
+    {
+        if (Edge == DockEdge.Top)
+        {
+            return peeked ? 0 : -40;
+        }
+
+        return Index * 14;
+    }
+
     private void ApplyPeekLayout()
     {
         if (!PeekOnly)
@@ -169,7 +179,7 @@ public partial class DockTab : UserControl
         TabBorder.Visibility = Visibility.Collapsed;
         PeekBorder.Visibility = Visibility.Visible;
         PeekLabel.Visibility = IsPeeked ? Visibility.Visible : Visibility.Collapsed;
-        SetStackTransform(GetRestingOffset(IsPeeked), false);
+        SetStackTransform(GetRestingOffset(IsPeeked), IsPeeked, false);
     }
 
     private void UpdateVisuals(Note note)
@@ -272,7 +282,9 @@ public partial class DockTab : UserControl
             scale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(targetScale, duration) { EasingFunction = easing });
             scale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(targetScale, duration) { EasingFunction = easing });
             translate.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(targetX, duration) { EasingFunction = easing });
-            translate.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(targetY + targetOffset, duration) { EasingFunction = easing });
+            translate.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(
+                PeekOnly && !isHovered ? GetRestingVerticalOffset(IsPeeked) : targetY + targetOffset,
+                duration) { EasingFunction = easing });
             rotate.BeginAnimation(RotateTransform.AngleProperty, new DoubleAnimation(targetRotation, duration) { EasingFunction = easing });
         }
 
@@ -282,7 +294,7 @@ public partial class DockTab : UserControl
             new DoubleAnimation(isHovered ? 16 : 8, duration) { EasingFunction = easing });
     }
 
-    private void SetStackTransform(double x, bool animate)
+    private void SetStackTransform(double x, bool peeked, bool animate)
     {
         var duration = animate && SystemParameters.ClientAreaAnimation
             ? new Duration(TimeSpan.FromMilliseconds(260))
@@ -295,7 +307,9 @@ public partial class DockTab : UserControl
             var translate = (TranslateTransform)group.Children[1];
             var rotate = (RotateTransform)group.Children[2];
             translate.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(x, duration) { EasingFunction = easing });
-            translate.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(Index * 14, duration) { EasingFunction = easing });
+            translate.BeginAnimation(TranslateTransform.YProperty,
+                new DoubleAnimation(GetRestingVerticalOffset(peeked), duration)
+                { EasingFunction = easing });
             rotate.BeginAnimation(RotateTransform.AngleProperty,
                 new DoubleAnimation(x == 0 ? 0 : Index * -2.2, duration) { EasingFunction = easing });
         }
