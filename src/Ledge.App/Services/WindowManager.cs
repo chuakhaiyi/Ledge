@@ -1,5 +1,6 @@
 namespace Ledge.App.Services;
 
+using System;
 using System.Windows;
 using Ledge.Core.Services;
 using Ledge.Core.Models;
@@ -100,20 +101,32 @@ public sealed class WindowManager
 
     public void ShowSettings()
     {
-        if (_settingsWindow == null)
+        try
         {
-            _settingsWindow = new SettingsWindow(_settingsStore!);
-            _settingsWindow.Closed += (_, _) => _settingsWindow = null;
-        }
+            if (_settingsWindow == null)
+            {
+                _settingsWindow = new SettingsWindow(_settingsStore!);
+                _settingsWindow.Closed += (_, _) => _settingsWindow = null;
+            }
 
-        if (_settingsWindow.WindowState == WindowState.Minimized)
+            if (_settingsWindow.WindowState == WindowState.Minimized)
+            {
+                _settingsWindow.WindowState = WindowState.Normal;
+            }
+
+            _settingsWindow.Show();
+            _settingsWindow.Activate();
+            _settingsWindow.Focus();
+        }
+        catch (Exception exception)
         {
-            _settingsWindow.WindowState = WindowState.Normal;
+            _settingsWindow = null;
+            MessageBox.Show(
+                $"Settings could not be opened.\n\n{exception.Message}",
+                "Ledge",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
         }
-
-        _settingsWindow.Show();
-        _settingsWindow.Activate();
-        _settingsWindow.Focus();
     }
 
     public void FocusDock()

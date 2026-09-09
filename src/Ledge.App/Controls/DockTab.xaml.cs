@@ -63,6 +63,16 @@ public partial class DockTab : UserControl
         set => SetValue(IsPeekedProperty, value);
     }
 
+    public static readonly DependencyProperty EdgeProperty =
+        DependencyProperty.Register(nameof(Edge), typeof(DockEdge), typeof(DockTab),
+            new PropertyMetadata(DockEdge.Right, OnEdgeChanged));
+
+    public DockEdge Edge
+    {
+        get => (DockEdge)GetValue(EdgeProperty);
+        set => SetValue(EdgeProperty, value);
+    }
+
     public event Action<Note>? TabClicked;
     public event Action<Note>? TabHovered;
 
@@ -117,6 +127,29 @@ public partial class DockTab : UserControl
         }
     }
 
+    private static void OnEdgeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is DockTab tab)
+        {
+            tab.ApplyPeekLayout();
+        }
+    }
+
+    private double GetRestingOffset(bool peeked)
+    {
+        if (Edge == DockEdge.Left)
+        {
+            return peeked ? -112 : -198;
+        }
+
+        if (Edge == DockEdge.Top)
+        {
+            return 0;
+        }
+
+        return peeked ? 112 : 198;
+    }
+
     private void ApplyPeekLayout()
     {
         if (!PeekOnly)
@@ -136,7 +169,7 @@ public partial class DockTab : UserControl
         TabBorder.Visibility = Visibility.Collapsed;
         PeekBorder.Visibility = Visibility.Visible;
         PeekLabel.Visibility = IsPeeked ? Visibility.Visible : Visibility.Collapsed;
-        SetStackTransform(IsPeeked ? 112 : 198, false);
+        SetStackTransform(GetRestingOffset(IsPeeked), false);
     }
 
     private void UpdateVisuals(Note note)
@@ -226,7 +259,7 @@ public partial class DockTab : UserControl
         var easing = new CubicEase { EasingMode = EasingMode.EaseOut };
         var targetScale = isHovered ? 1.0 : 1.0;
         var targetOffset = isHovered ? 0.0 : 0.0;
-        var targetX = PeekOnly ? (isHovered ? 0.0 : IsPeeked ? 112.0 : 198.0) : 0.0;
+        var targetX = PeekOnly ? (isHovered ? 0.0 : GetRestingOffset(IsPeeked)) : 0.0;
         var targetY = PeekOnly ? Index * 14.0 : 0.0;
         var targetRotation = PeekOnly && !isHovered ? Index * -2.2 : 0.0;
 

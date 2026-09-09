@@ -201,7 +201,21 @@ public sealed class SystemTrayService : IDisposable
     {
         Application.Current.Dispatcher.BeginInvoke(
             DispatcherPriority.Background,
-            new Action(action));
+            new Action(() =>
+            {
+                try
+                {
+                    action();
+                }
+                catch (Exception exception)
+                {
+                    MessageBox.Show(
+                        $"The requested action could not be completed.\n\n{exception.Message}",
+                        "Ledge",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                }
+            }));
     }
 
     public void Dispose()

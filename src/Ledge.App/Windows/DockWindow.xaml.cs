@@ -65,6 +65,16 @@ public partial class DockWindow : Window
         set => SetValue(IsPeekingProperty, value);
     }
 
+    public static readonly DependencyProperty CurrentDockEdgeProperty =
+        DependencyProperty.Register(nameof(CurrentDockEdge), typeof(DockEdge), typeof(DockWindow),
+            new PropertyMetadata(DockEdge.Right));
+
+    public DockEdge CurrentDockEdge
+    {
+        get => (DockEdge)GetValue(CurrentDockEdgeProperty);
+        private set => SetValue(CurrentDockEdgeProperty, value);
+    }
+
     public DockWindow(NoteStore noteStore, SettingsStore settingsStore)
     {
         _noteStore = noteStore;
@@ -166,13 +176,12 @@ public partial class DockWindow : Window
     private void UpdateLayoutForEdge()
     {
         var edge = _settingsStore.DockEdge;
+        CurrentDockEdge = edge;
         if (edge == DockEdge.Top)
         {
             Height = _isExpanded ? 260 : _isPeeking ? 120 : 72;
             CollapsedTabs.HorizontalAlignment = HorizontalAlignment.Center;
             CollapsedTabs.VerticalAlignment = VerticalAlignment.Bottom;
-            CollapsedTabs.Width = Width;
-            CollapsedTabs.Height = Height;
             CollapsedEmptyMark.Width = 52;
             CollapsedEmptyMark.Height = 8;
             CollapsedEmptyMark.HorizontalAlignment = HorizontalAlignment.Center;
@@ -187,8 +196,6 @@ public partial class DockWindow : Window
             Height = SystemParameters.WorkArea.Height;
             CollapsedTabs.HorizontalAlignment = HorizontalAlignment.Left;
             CollapsedTabs.VerticalAlignment = VerticalAlignment.Center;
-            CollapsedTabs.Width = Width;
-            CollapsedTabs.Height = Height;
             CollapsedEmptyMark.HorizontalAlignment = HorizontalAlignment.Left;
             CollapsedEmptyMark.VerticalAlignment = VerticalAlignment.Center;
 
@@ -201,8 +208,6 @@ public partial class DockWindow : Window
             Height = SystemParameters.WorkArea.Height;
             CollapsedTabs.HorizontalAlignment = HorizontalAlignment.Right;
             CollapsedTabs.VerticalAlignment = VerticalAlignment.Center;
-            CollapsedTabs.Width = Width;
-            CollapsedTabs.Height = Height;
             CollapsedEmptyMark.HorizontalAlignment = HorizontalAlignment.Right;
             CollapsedEmptyMark.VerticalAlignment = VerticalAlignment.Center;
 
@@ -283,6 +288,44 @@ public partial class DockWindow : Window
         else
         {
             OverflowTab.Visibility = Visibility.Collapsed;
+        }
+
+        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(PositionCollapsedItems));
+    }
+
+    private void PositionCollapsedItems()
+    {
+        CollapsedTabs.UpdateLayout();
+        var count = CollapsedTabs.Items.Count;
+        if (count == 0)
+        {
+            return;
+        }
+
+        var edge = _settingsStore.DockEdge;
+        var cardSpacing = 14.0;
+        var cardHeight = 58.0;
+        var cardWidth = 216.0;
+
+        for (var index = 0; index < count; index++)
+        {
+            if (CollapsedTabs.ItemContainerGenerator.ContainerFromIndex(index) is not UIElement container)
+            {
+                continue;
+            }
+
+            if (edge == DockEdge.Top)
+            {
+                var totalWidth = cardWidth + (count - 1) * cardSpacing;
+                Canvas.SetLeft(container, Math.Max(0, (ActualWidth - totalWidth) / 2 + index * cardSpacing));
+                Canvas.SetTop(container, 0);
+            }
+            else
+            {
+                var totalHeight = cardHeight + (count - 1) * cardSpacing;
+                Canvas.SetLeft(container, 0);
+                Canvas.SetTop(container, Math.Max(0, (ActualHeight - totalHeight) / 2 + index * cardSpacing));
+            }
         }
     }
 
