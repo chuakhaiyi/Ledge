@@ -44,6 +44,16 @@ public partial class DockWindow : Window
         set => SetValue(VisibleUnpinnedNotesProperty, value);
     }
 
+    public static readonly DependencyProperty CollapsedNotesProperty =
+        DependencyProperty.Register(nameof(CollapsedNotes), typeof(System.Collections.IEnumerable), typeof(DockWindow),
+            new PropertyMetadata(null));
+
+    public System.Collections.IEnumerable CollapsedNotes
+    {
+        get => (System.Collections.IEnumerable)GetValue(CollapsedNotesProperty);
+        set => SetValue(CollapsedNotesProperty, value);
+    }
+
     public DockWindow(NoteStore noteStore, SettingsStore settingsStore)
     {
         _noteStore = noteStore;
@@ -120,20 +130,20 @@ public partial class DockWindow : Window
         {
             var topWidth = Math.Min(620, Math.Max(400, screen.Width - 100));
             Width = topWidth;
-            Height = _isExpanded ? 260 : 22;
+            Height = _isExpanded ? 260 : 72;
             Left = screen.Left + (screen.Width - topWidth) / 2;
             Top = screen.Top;
         }
         else if (edge == DockEdge.Left)
         {
-            Width = _isExpanded ? 260 : 20;
+            Width = _isExpanded ? 260 : 72;
             Height = screen.Height;
             Left = screen.Left;
             Top = screen.Top;
         }
         else // DockEdge.Right
         {
-            var width = _isExpanded ? 260 : 20;
+            var width = _isExpanded ? 260 : 72;
             Width = width;
             Height = screen.Height;
             Left = screen.Right - width;
@@ -146,11 +156,14 @@ public partial class DockWindow : Window
         var edge = _settingsStore.DockEdge;
         if (edge == DockEdge.Top)
         {
-            CollapsedEdgeBar.Height = 4;
-            CollapsedEdgeBar.Width = double.NaN;
-            CollapsedEdgeBar.HorizontalAlignment = HorizontalAlignment.Stretch;
-            CollapsedEdgeBar.VerticalAlignment = VerticalAlignment.Top;
-            CollapsedView.BorderThickness = new Thickness(0, 3, 0, 0);
+            Height = _isExpanded ? 260 : 72;
+            SetCollapsedOrientation(Orientation.Horizontal);
+            CollapsedTabs.HorizontalAlignment = HorizontalAlignment.Center;
+            CollapsedTabs.VerticalAlignment = VerticalAlignment.Bottom;
+            CollapsedEmptyMark.Width = 52;
+            CollapsedEmptyMark.Height = 8;
+            CollapsedEmptyMark.HorizontalAlignment = HorizontalAlignment.Center;
+            CollapsedEmptyMark.VerticalAlignment = VerticalAlignment.Bottom;
 
             NotesStackPanel.Orientation = Orientation.Horizontal;
             DockScrollViewer.HorizontalScrollBarVisibility = ScrollBarVisibility.Auto;
@@ -158,11 +171,12 @@ public partial class DockWindow : Window
         }
         else if (edge == DockEdge.Left)
         {
-            CollapsedEdgeBar.Width = 4;
-            CollapsedEdgeBar.Height = double.NaN;
-            CollapsedEdgeBar.HorizontalAlignment = HorizontalAlignment.Left;
-            CollapsedEdgeBar.VerticalAlignment = VerticalAlignment.Stretch;
-            CollapsedView.BorderThickness = new Thickness(3, 0, 0, 0);
+            Height = SystemParameters.WorkArea.Height;
+            SetCollapsedOrientation(Orientation.Vertical);
+            CollapsedTabs.HorizontalAlignment = HorizontalAlignment.Left;
+            CollapsedTabs.VerticalAlignment = VerticalAlignment.Center;
+            CollapsedEmptyMark.HorizontalAlignment = HorizontalAlignment.Left;
+            CollapsedEmptyMark.VerticalAlignment = VerticalAlignment.Center;
 
             NotesStackPanel.Orientation = Orientation.Vertical;
             DockScrollViewer.HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled;
@@ -170,16 +184,24 @@ public partial class DockWindow : Window
         }
         else // Right
         {
-            CollapsedEdgeBar.Width = 4;
-            CollapsedEdgeBar.Height = double.NaN;
-            CollapsedEdgeBar.HorizontalAlignment = HorizontalAlignment.Right;
-            CollapsedEdgeBar.VerticalAlignment = VerticalAlignment.Stretch;
-            CollapsedView.BorderThickness = new Thickness(0, 0, 3, 0);
+            Height = SystemParameters.WorkArea.Height;
+            SetCollapsedOrientation(Orientation.Vertical);
+            CollapsedTabs.HorizontalAlignment = HorizontalAlignment.Right;
+            CollapsedTabs.VerticalAlignment = VerticalAlignment.Center;
+            CollapsedEmptyMark.HorizontalAlignment = HorizontalAlignment.Right;
+            CollapsedEmptyMark.VerticalAlignment = VerticalAlignment.Center;
 
             NotesStackPanel.Orientation = Orientation.Vertical;
             DockScrollViewer.HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled;
             DockScrollViewer.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
         }
+    }
+
+    private void SetCollapsedOrientation(Orientation orientation)
+    {
+        var panel = new FrameworkElementFactory(typeof(StackPanel));
+        panel.SetValue(StackPanel.OrientationProperty, orientation);
+        CollapsedTabs.ItemsPanel = new ItemsPanelTemplate(panel);
     }
 
     public void Expand()
@@ -210,6 +232,8 @@ public partial class DockWindow : Window
 
         PinnedNotes = pinned;
         VisibleUnpinnedNotes = unpinned.Take(8);
+        CollapsedNotes = pinned.Concat(unpinned).Take(8).ToList();
+        CollapsedEmptyMark.Visibility = totalActive == 0 ? Visibility.Visible : Visibility.Collapsed;
 
         NoteCountText.Text = $"({totalActive})";
 

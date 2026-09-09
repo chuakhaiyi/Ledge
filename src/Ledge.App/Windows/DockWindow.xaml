@@ -17,24 +17,34 @@
     <Grid x:Name="RootGrid">
         <!-- Collapsed edge view -->
         <Border x:Name="CollapsedView"
-                Background="{StaticResource BackgroundBrush}"
-                BorderBrush="{StaticResource AccentBrush}"
-                BorderThickness="0"
+                Background="Transparent"
                 Cursor="Hand"
                 ToolTip="Ledge — hover or click to open">
-            <Grid x:Name="CollapsedGrid">
-                <!-- Visual accent strip -->
-                <Border x:Name="CollapsedEdgeBar"
-                        Background="{StaticResource AccentBrush}"/>
+            <Grid x:Name="CollapsedGrid" ClipToBounds="False">
+                <ItemsControl x:Name="CollapsedTabs"
+                              ItemsSource="{Binding CollapsedNotes, RelativeSource={RelativeSource AncestorType=Window}}"
+                              HorizontalAlignment="Right"
+                              VerticalAlignment="Center">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Vertical"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <local:DockTab Note="{Binding}" PeekOnly="True"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
 
-                <!-- Icon/indicator in collapsed strip -->
-                <TextBlock x:Name="CollapsedHint"
-                           Text="•••"
-                           Foreground="{StaticResource SecondaryTextBrush}"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center"
-                           FontSize="10"
-                           FontWeight="Bold"/>
+                <Border x:Name="CollapsedEmptyMark"
+                        Width="8"
+                        Height="52"
+                        Background="{StaticResource AccentBrush}"
+                        CornerRadius="4"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
+                        Visibility="Collapsed"/>
             </Grid>
         </Border>
 

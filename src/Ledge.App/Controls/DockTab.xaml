@@ -5,6 +5,7 @@
              MinHeight="56"
              Margin="0,3"
              Cursor="Hand">
+    <Grid>
     <Border x:Name="TabBorder"
             Background="#C7D2B8"
             CornerRadius="6"
@@ -79,4 +80,28 @@
                        TextTrimming="CharacterEllipsis"/>
         </Grid>
     </Border>
+    <Border x:Name="PeekBorder"
+            Width="58"
+            Height="28"
+            Background="#C7D2B8"
+            CornerRadius="8"
+            BorderBrush="{StaticResource BorderBrush}"
+            BorderThickness="1,1,0,1"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Center"
+            Visibility="Collapsed"
+            MouseLeftButtonDown="TabBorder_MouseLeftButtonDown"
+            MouseEnter="TabBorder_MouseEnter"
+            MouseLeave="TabBorder_MouseLeave">
+        <TextBlock x:Name="PeekLabel"
+                   Margin="10,0,6,0"
+                   VerticalAlignment="Center"
+                   FontFamily="{StaticResource UIFont}"
+                   FontSize="10"
+                   FontWeight="SemiBold"
+                   Foreground="#1B1D22"
+                   Text="Note"
+                   TextTrimming="CharacterEllipsis"/>
+    </Border>
+    </Grid>
 </UserControl>

@@ -41,6 +41,16 @@ public partial class DockTab : UserControl
         set => SetValue(IsPinnedProperty, value);
     }
 
+    public static readonly DependencyProperty PeekOnlyProperty =
+        DependencyProperty.Register(nameof(PeekOnly), typeof(bool), typeof(DockTab),
+            new PropertyMetadata(false, OnPeekOnlyChanged));
+
+    public bool PeekOnly
+    {
+        get => (bool)GetValue(PeekOnlyProperty);
+        set => SetValue(PeekOnlyProperty, value);
+    }
+
     public event Action<Note>? TabClicked;
     public event Action<Note>? TabHovered;
 
@@ -65,6 +75,19 @@ public partial class DockTab : UserControl
         }
     }
 
+    private static void OnPeekOnlyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is DockTab tab)
+        {
+            var peekOnly = (bool)e.NewValue;
+            tab.Width = peekOnly ? 58 : 220;
+            tab.MinHeight = peekOnly ? 28 : 56;
+            tab.Margin = peekOnly ? new Thickness(0, -7, 0, -7) : new Thickness(0, 3, 0, 3);
+            tab.TabBorder.Visibility = peekOnly ? Visibility.Collapsed : Visibility.Visible;
+            tab.PeekBorder.Visibility = peekOnly ? Visibility.Visible : Visibility.Collapsed;
+        }
+    }
+
     private void UpdateVisuals(Note note)
     {
         try
@@ -80,6 +103,8 @@ public partial class DockTab : UserControl
         HeaderWord.Text = lines.Length > 0 ? lines[0].Trim() : "Empty note";
         BodyText.Text = lines.Length > 1 ? string.Join(" ", lines.Skip(1)).Trim() : (lines.Length > 0 ? lines[0].Trim() : "");
         TimestampText.Text = GetRelativeTime(note.ModifiedAt);
+        PeekLabel.Text = HeaderWord.Text;
+        PeekBorder.Background = TabBorder.Background;
         PinnedDot.Visibility = note.Pinned ? Visibility.Visible : Visibility.Collapsed;
         ToolTip = string.IsNullOrWhiteSpace(note.Text) ? "Empty note" : note.Text;
     }
