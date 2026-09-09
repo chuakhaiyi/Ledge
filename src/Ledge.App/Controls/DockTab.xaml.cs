@@ -53,6 +53,16 @@ public partial class DockTab : UserControl
         set => SetValue(PeekOnlyProperty, value);
     }
 
+    public static readonly DependencyProperty IsPeekedProperty =
+        DependencyProperty.Register(nameof(IsPeeked), typeof(bool), typeof(DockTab),
+            new PropertyMetadata(false, OnIsPeekedChanged));
+
+    public bool IsPeeked
+    {
+        get => (bool)GetValue(IsPeekedProperty);
+        set => SetValue(IsPeekedProperty, value);
+    }
+
     public event Action<Note>? TabClicked;
     public event Action<Note>? TabHovered;
 
@@ -94,13 +104,36 @@ public partial class DockTab : UserControl
     {
         if (d is DockTab tab)
         {
-            var peekOnly = (bool)e.NewValue;
-            tab.Width = peekOnly ? 58 : 220;
-            tab.MinHeight = peekOnly ? 28 : 56;
-            tab.Margin = peekOnly ? new Thickness(0, -7, 0, -7) : new Thickness(0, 3, 0, 3);
-            tab.TabBorder.Visibility = peekOnly ? Visibility.Collapsed : Visibility.Visible;
-            tab.PeekBorder.Visibility = peekOnly ? Visibility.Visible : Visibility.Collapsed;
+            tab.ApplyPeekLayout();
         }
+    }
+
+    private static void OnIsPeekedChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is DockTab tab)
+        {
+            tab.ApplyPeekLayout();
+        }
+    }
+
+    private void ApplyPeekLayout()
+    {
+        if (!PeekOnly)
+        {
+            Width = 220;
+            MinHeight = 56;
+            Margin = new Thickness(0, 3, 0, 3);
+            TabBorder.Visibility = Visibility.Visible;
+            PeekBorder.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        Width = IsPeeked ? 112 : 14;
+        MinHeight = 28;
+        Margin = new Thickness(0, -7, 0, -7);
+        TabBorder.Visibility = Visibility.Collapsed;
+        PeekBorder.Visibility = Visibility.Visible;
+        PeekLabel.Visibility = IsPeeked ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void UpdateVisuals(Note note)
@@ -108,6 +141,11 @@ public partial class DockTab : UserControl
         try
         {
             TabBorder.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(note.Color.ToHex()));
+            var foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString(note.Color.ToForegroundHex()));
+            HeaderWord.Foreground = foreground;
+            BodyText.Foreground = foreground;
+            TimestampText.Foreground = foreground;
+            PeekLabel.Foreground = foreground;
         }
         catch
         {
@@ -152,6 +190,15 @@ public partial class DockTab : UserControl
 
     private void TabBorder_MouseEnter(object sender, MouseEventArgs e)
     {
+        if (PeekOnly)
+        {
+            TabBorder.Visibility = Visibility.Visible;
+            PeekBorder.Visibility = Visibility.Collapsed;
+            Width = 220;
+            MinHeight = 56;
+            Margin = new Thickness(0, 3, 0, 3);
+        }
+
         AnimateHover(true);
         if (Note != null)
         {
@@ -162,6 +209,10 @@ public partial class DockTab : UserControl
     private void TabBorder_MouseLeave(object sender, MouseEventArgs e)
     {
         AnimateHover(false);
+        if (PeekOnly)
+        {
+            ApplyPeekLayout();
+        }
     }
 
     private void AnimateHover(bool isHovered)

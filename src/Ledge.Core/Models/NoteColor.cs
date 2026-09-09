@@ -40,6 +40,27 @@ public static class NoteColorExtensions
 
     public static string ToHex(this NoteColor color) => HexMap[color];
 
+    public static string ToForegroundHex(this NoteColor color)
+    {
+        var hex = color.ToHex().TrimStart('#');
+        var red = Convert.ToInt32(hex[0..2], 16) / 255.0;
+        var green = Convert.ToInt32(hex[2..4], 16) / 255.0;
+        var blue = Convert.ToInt32(hex[4..6], 16) / 255.0;
+
+        static double Linearize(double channel)
+            => channel <= 0.03928
+                ? channel / 12.92
+                : Math.Pow((channel + 0.055) / 1.055, 2.4);
+
+        var luminance = (0.2126 * Linearize(red))
+            + (0.7152 * Linearize(green))
+            + (0.0722 * Linearize(blue));
+        var darkContrast = (luminance + 0.05) / 0.05;
+        var lightContrast = 1.05 / (luminance + 0.05);
+
+        return darkContrast >= lightContrast ? "#1B1D22" : "#EAE6DC";
+    }
+
     public static NoteColor Next(this NoteColor color)
     {
         var index = Array.IndexOf(CycleOrder, color);

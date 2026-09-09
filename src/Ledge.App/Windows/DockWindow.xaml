@@ -33,7 +33,8 @@
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <local:DockTab Note="{Binding}"
-                                           PeekOnly="True"/>
+                                           PeekOnly="True"
+                                           IsPeeked="{Binding IsPeeking, RelativeSource={RelativeSource AncestorType=Window}}"/>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>

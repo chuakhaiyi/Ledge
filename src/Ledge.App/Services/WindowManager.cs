@@ -105,8 +105,15 @@ public sealed class WindowManager
             _settingsWindow = new SettingsWindow(_settingsStore!);
             _settingsWindow.Closed += (_, _) => _settingsWindow = null;
         }
+
+        if (_settingsWindow.WindowState == WindowState.Minimized)
+        {
+            _settingsWindow.WindowState = WindowState.Normal;
+        }
+
         _settingsWindow.Show();
         _settingsWindow.Activate();
+        _settingsWindow.Focus();
     }
 
     public void FocusDock()

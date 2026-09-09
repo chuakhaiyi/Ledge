@@ -107,6 +107,9 @@ public partial class NoteEditor : UserControl
     public void UpdateColorIndicator(NoteColor color)
     {
         ColorIndicator.Fill = new SolidColorBrush((Color)ColorConverter.ConvertFromString(color.ToHex()));
+        var foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString(color.ToForegroundHex()));
+        TextBox.Foreground = foreground;
+        TextBox.CaretBrush = foreground;
     }
 
     private void UpdateColorSelection(NoteColor color)

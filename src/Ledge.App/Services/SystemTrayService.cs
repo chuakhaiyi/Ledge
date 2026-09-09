@@ -138,42 +138,62 @@ public sealed class SystemTrayService : IDisposable
     {
         if (_windowManager == null) return;
 
-        var menu = new System.Windows.Controls.ContextMenu
+        var menu = new System.Windows.Controls.ContextMenu();
+
+        var newNote = new System.Windows.Controls.MenuItem { Header = "New Note" };
+        newNote.Click += (_, _) =>
         {
-            ItemsSource = new object[]
-            {
-                new System.Windows.Controls.MenuItem
-                {
-                    Header = "New Note",
-                    Command = new RelayCommand(() => _windowManager?.CreateNewNote())
-                },
-                new System.Windows.Controls.MenuItem
-                {
-                    Header = "All Notes",
-                    Command = new RelayCommand(() => _windowManager?.ShowLibrary())
-                },
-                new System.Windows.Controls.MenuItem
-                {
-                    Header = "Archived",
-                    Command = new RelayCommand(() => _windowManager?.ShowArchive())
-                },
-                new System.Windows.Controls.Separator(),
-                new System.Windows.Controls.MenuItem
-                {
-                    Header = "Settings",
-                    Command = new RelayCommand(() => _windowManager?.ShowSettings())
-                },
-                new System.Windows.Controls.Separator(),
-                new System.Windows.Controls.MenuItem
-                {
-                    Header = "Exit",
-                    Command = new RelayCommand(() => Application.Current?.Shutdown())
-                }
-            }
+            CloseContextMenu(menu);
+            _windowManager.CreateNewNote();
         };
+
+        var allNotes = new System.Windows.Controls.MenuItem { Header = "All Notes" };
+        allNotes.Click += (_, _) =>
+        {
+            CloseContextMenu(menu);
+            _windowManager.ShowLibrary();
+        };
+
+        var archived = new System.Windows.Controls.MenuItem { Header = "Archived" };
+        archived.Click += (_, _) =>
+        {
+            CloseContextMenu(menu);
+            _windowManager.ShowArchive();
+        };
+
+        var settings = new System.Windows.Controls.MenuItem { Header = "Settings" };
+        settings.Click += (_, _) =>
+        {
+            CloseContextMenu(menu);
+            _windowManager.ShowSettings();
+        };
+
+        var exit = new System.Windows.Controls.MenuItem { Header = "Exit" };
+        exit.Click += (_, _) =>
+        {
+            CloseContextMenu(menu);
+            Application.Current?.Shutdown();
+        };
+
+        menu.Items.Add(newNote);
+        menu.Items.Add(allNotes);
+        menu.Items.Add(archived);
+        menu.Items.Add(new System.Windows.Controls.Separator());
+        menu.Items.Add(settings);
+        menu.Items.Add(new System.Windows.Controls.Separator());
+        menu.Items.Add(exit);
 
         _notifyIcon.ContextMenu = menu;
         menu.IsOpen = true;
+    }
+
+    private void CloseContextMenu(System.Windows.Controls.ContextMenu menu)
+    {
+        menu.IsOpen = false;
+        if (ReferenceEquals(_notifyIcon.ContextMenu, menu))
+        {
+            _notifyIcon.ContextMenu = null;
+        }
     }
 
     public void Dispose()
@@ -185,13 +205,4 @@ public sealed class SystemTrayService : IDisposable
         _notifyIcon.Visibility = Visibility.Hidden;
         _notifyIcon.Dispose();
     }
-}
-
-public sealed class RelayCommand : System.Windows.Input.ICommand
-{
-    private readonly Action _execute;
-    public event EventHandler? CanExecuteChanged;
-    public RelayCommand(Action execute) => _execute = execute;
-    public bool CanExecute(object? parameter) => true;
-    public void Execute(object? parameter) => _execute();
 }

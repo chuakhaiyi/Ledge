@@ -147,14 +147,14 @@ public partial class DockWindow : Window
         }
         else if (edge == DockEdge.Left)
         {
-            Width = _isExpanded ? 260 : _isPeeking ? 180 : 72;
+            Width = _isExpanded ? 260 : _isPeeking ? 230 : 72;
             Height = screen.Height;
             Left = screen.Left;
             Top = screen.Top;
         }
         else // DockEdge.Right
         {
-            var width = _isExpanded ? 260 : _isPeeking ? 180 : 72;
+            var width = _isExpanded ? 260 : _isPeeking ? 230 : 72;
             Width = width;
             Height = screen.Height;
             Left = screen.Right - width;

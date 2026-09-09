@@ -4,6 +4,7 @@
              Width="220"
              MinHeight="56"
              Margin="0,3"
+             HorizontalAlignment="Right"
              Cursor="Hand">
     <Grid>
     <Border x:Name="TabBorder"
