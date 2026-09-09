@@ -78,7 +78,7 @@
                        Style="{StaticResource SecondaryText}"
                        FontSize="12"
                        FontWeight="SemiBold"
-                       Foreground="{StaticResource AshColor}"/>
+                       Foreground="{StaticResource SecondaryTextBrush}"/>
             <Separator Style="{StaticResource SectionSeparator}" DockPanel.Dock="Bottom"/>
         </DockPanel>
     </DataTemplate>

@@ -57,6 +57,9 @@ public partial class LibraryWindow : Window
 
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
+        // Populate sort mode combo box
+        SortComboBox.ItemsSource = Enum.GetValues(typeof(NoteSortMode));
+        
         RefreshList();
         SearchBox.FocusSearch();
     }
@@ -194,10 +197,17 @@ public partial class LibraryWindow : Window
 
     private void RefreshFilters()
     {
-        ApplyFilterAndSort(_pinnedView!);
-        ApplyFilterAndSort(_notesView!);
-        ApplyFilterAndSort(_archivedView!);
+        if (_pinnedView == null || _notesView == null || _archivedView == null) return;
+        ApplyFilterAndSort(_pinnedView);
+        ApplyFilterAndSort(_notesView);
+        ApplyFilterAndSort(_archivedView);
         BuildUI(); // Rebuild to update Archived count in header
+    }
+
+    private void NewNote_Click(object sender, RoutedEventArgs e)
+    {
+        var windowManager = App.GetService<WindowManager>();
+        windowManager.CreateNewNote();
     }
 
     private void OpenNote(Note note)

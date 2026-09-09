@@ -16,48 +16,79 @@
 
             <!-- Titlebar -->
             <Border Grid.Row="0" Background="{StaticResource OverlayBrush}" CornerRadius="8,8,0,0">
-                <Grid>
+                <Grid Margin="6,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- Traffic light dots -->
-                    <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="10,0" VerticalAlignment="Center">
-                        <Ellipse Style="{StaticResource TitlebarDot}"/>
-                        <Ellipse Style="{StaticResource TitlebarDot}"/>
-                    </StackPanel>
-
-                    <!-- Color picker -->
-                    <Button Grid.Column="2"
-                            x:Name="ColorButton"
+                    <!-- New note button -->
+                    <Button Grid.Column="0"
+                            x:Name="NewNoteButton"
                             Style="{StaticResource IconButton}"
-                            Click="ColorButton_Click"
-                            ToolTip="Change color (Ctrl+.)">
-                        <Grid Width="20" Height="20">
-                            <Ellipse x:Name="ColorIndicator" Fill="#C7D2B8" Stroke="{StaticResource BorderBrush}" StrokeThickness="1"/>
-                            <Path Data="M0,0 L4,4 L8,0" Stroke="{StaticResource SecondaryTextBrush}" StrokeThickness="1.5" VerticalAlignment="Bottom" Margin="0,0,0,2"/>
-                        </Grid>
-                        <Button.ContextMenu>
-                            <ContextMenu x:Name="ColorPopup" PlacementTarget="{Binding ElementName=ColorButton}" Placement="Bottom">
-                                <ContextMenu.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <UniformGrid Rows="1" Columns="8"/>
-                                    </ItemsPanelTemplate>
-                                </ContextMenu.ItemsPanel>
-                                <ContextMenu.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Width="28" Height="28" Margin="4" CornerRadius="4" Background="{Binding ColorBrush}"
-                                                BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
-                                                Cursor="Hand" ToolTip="{Binding ColorName}"
-                                                MouseLeftButtonDown="ColorChip_Click">
-                                        </Border>
-                                    </DataTemplate>
-                                </ContextMenu.ItemTemplate>
-                            </ContextMenu>
-                        </Button.ContextMenu>
+                            Click="NewNoteButton_Click"
+                            ToolTip="New note (Ctrl+Alt+N)">
+                        <Path Data="M5,0 L5,10 M0,5 L10,5"
+                              Stroke="{StaticResource SecondaryTextBrush}"
+                              StrokeThickness="1.5" Width="10" Height="10"/>
                     </Button>
+
+                    <!-- Drag area in center -->
+                    <Border Grid.Column="1" Background="Transparent"/>
+
+                    <!-- Action buttons -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <!-- Pin button -->
+                        <Button x:Name="PinButton"
+                                Style="{StaticResource IconButton}"
+                                Click="PinButton_Click"
+                                ToolTip="Pin note to dock">
+                            <Path x:Name="PinIcon"
+                                  Data="M3,1 L9,1 M6,1 L6,3 M2,3 L10,3 L8,8 L7,8 L7,13 L5,13 L5,8 L4,8 Z"
+                                  Stroke="{StaticResource SecondaryTextBrush}"
+                                  Fill="Transparent"
+                                  StrokeThickness="1.2" Width="12" Height="14"/>
+                        </Button>
+
+                        <!-- Color picker -->
+                        <Button x:Name="ColorButton"
+                                Style="{StaticResource IconButton}"
+                                Click="ColorButton_Click"
+                                ToolTip="Change color (Ctrl+.)">
+                            <Grid Width="16" Height="16">
+                                <Ellipse x:Name="ColorIndicator" Fill="#C7D2B8" Stroke="{StaticResource BorderBrush}" StrokeThickness="1"/>
+                            </Grid>
+                            <Button.ContextMenu>
+                                <ContextMenu x:Name="ColorPopup" PlacementTarget="{Binding ElementName=ColorButton}" Placement="Bottom">
+                                    <ContextMenu.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <UniformGrid Rows="1" Columns="8"/>
+                                        </ItemsPanelTemplate>
+                                    </ContextMenu.ItemsPanel>
+                                    <ContextMenu.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Width="28" Height="28" Margin="4" CornerRadius="4" Background="{Binding ColorBrush}"
+                                                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                                                    Cursor="Hand" ToolTip="{Binding ColorName}"
+                                                    MouseLeftButtonDown="ColorChip_Click">
+                                            </Border>
+                                        </DataTemplate>
+                                    </ContextMenu.ItemTemplate>
+                                </ContextMenu>
+                            </Button.ContextMenu>
+                        </Button>
+
+                        <!-- Close note window -->
+                        <Button x:Name="CloseButton"
+                                Style="{StaticResource IconButton}"
+                                Click="CloseButton_Click"
+                                ToolTip="Close (Esc)">
+                            <Path Data="M0,0 L10,10 M10,0 L0,10"
+                                  Stroke="{StaticResource SecondaryTextBrush}"
+                                  StrokeThickness="1.5" Width="10" Height="10"/>
+                        </Button>
+                    </StackPanel>
                 </Grid>
             </Border>
 
@@ -100,8 +131,10 @@
                 <Button Grid.Column="2"
                         Style="{StaticResource IconButton}"
                         Click="DeleteButton_Click"
-                        ToolTip="Delete (Ctrl+Backspace)">
-                    <Path Data="M0,0 L12,12 M12,0 L0,12" Stroke="{StaticResource SecondaryTextBrush}" StrokeThickness="1.5" Width="12" Height="12"/>
+                        ToolTip="Delete note (Ctrl+Backspace)">
+                    <Path Data="M2,3 L12,3 M4,3 L4,12 L10,12 L10,3 M5,1 L9,1 M6,5 L6,10 M8,5 L8,10"
+                          Stroke="{StaticResource SecondaryTextBrush}"
+                          StrokeThickness="1.2" Width="14" Height="14"/>
                 </Button>
             </Grid>
         </Grid>

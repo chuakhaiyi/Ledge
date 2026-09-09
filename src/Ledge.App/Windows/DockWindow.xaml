@@ -3,91 +3,176 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:Ledge.App.Controls"
         Style="{StaticResource BorderlessWindow}"
-        Width="220"
-        Height="{x:Static SystemParameters.PrimaryScreenHeight}"
         Loaded="Window_Loaded"
-        SizeChanged="Window_SizeChanged"
         KeyDown="Window_KeyDown"
         Focusable="False"
+        MouseEnter="Window_MouseEnter"
+        MouseLeave="Window_MouseLeave"
+        MouseLeftButtonDown="Window_MouseLeftButtonDown"
         SourceInitialized="Window_SourceInitialized">
     <Window.Resources>
         <local:NoteToDockTabConverter x:Key="NoteToTabConverter"/>
     </Window.Resources>
 
     <Grid x:Name="RootGrid">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="20"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
+        <!-- Collapsed edge view -->
+        <Border x:Name="CollapsedView"
+                Background="{StaticResource BackgroundBrush}"
+                BorderBrush="{StaticResource AccentBrush}"
+                BorderThickness="0"
+                Cursor="Hand"
+                ToolTip="Ledge — hover or click to open">
+            <Grid x:Name="CollapsedGrid">
+                <!-- Visual accent strip -->
+                <Border x:Name="CollapsedEdgeBar"
+                        Background="{StaticResource AccentBrush}"/>
 
-        <!-- Collapsed edge indicator -->
-        <Border x:Name="CollapsedEdge"
-                Grid.Column="0"
-                Background="{StaticResource AccentBrush}"
-                Width="20"
-                Visibility="Visible">
-            <Border.ToolTip>
-                <TextBlock Text="Ledge — hover to peek" Foreground="White" FontSize="11" Padding="8,4"/>
-            </Border.ToolTip>
+                <!-- Icon/indicator in collapsed strip -->
+                <TextBlock x:Name="CollapsedHint"
+                           Text="•••"
+                           Foreground="{StaticResource SecondaryTextBrush}"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           FontSize="10"
+                           FontWeight="Bold"/>
+            </Grid>
         </Border>
 
-        <!-- Expanded dock area -->
-        <Border x:Name="ExpandedArea"
-                Grid.Column="1"
+        <!-- Expanded dock view -->
+        <Border x:Name="ExpandedView"
                 Background="{StaticResource BackgroundBrush}"
                 BorderBrush="{StaticResource BorderBrush}"
-                BorderThickness="0,0,1,0"
-                Visibility="Collapsed"
-                Width="200">
-            <Grid>
+                BorderThickness="1"
+                Visibility="Collapsed">
+            <Grid x:Name="ExpandedGrid">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <!-- Pinned section -->
-                <ItemsControl x:Name="PinnedTabs"
-                              Grid.Row="0"
-                              ItemsSource="{Binding PinnedNotes, RelativeSource={RelativeSource AncestorType=Window}}"
-                              ItemTemplate="{StaticResource DockTabTemplate}"
-                              Visibility="Visible">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <StackPanel Orientation="Vertical"/>
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                </ItemsControl>
+                <!-- Header -->
+                <Border Grid.Row="0"
+                        Background="{StaticResource OverlayBrush}"
+                        BorderBrush="{StaticResource BorderBrush}"
+                        BorderThickness="0,0,0,1"
+                        Padding="12,8">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
 
-                <!-- Hotzone for hover detection -->
-                <Border x:Name="Hotzone"
-                        Grid.Row="1"
-                        Background="Transparent"
-                        MouseEnter="Hotzone_MouseEnter"
-                        MouseLeave="Hotzone_MouseLeave">
-                    <ItemsControl x:Name="TabsList"
-                                  ItemsSource="{Binding VisibleUnpinnedNotes, RelativeSource={RelativeSource AncestorType=Window}}"
-                                  ItemTemplate="{StaticResource DockTabTemplate}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <StackPanel Orientation="Vertical"/>
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                    </ItemsControl>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="Ledge"
+                                       Style="{StaticResource DisplayText}"
+                                       FontSize="16"
+                                       FontWeight="SemiBold"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock x:Name="NoteCountText"
+                                       Style="{StaticResource SecondaryText}"
+                                       Margin="8,0,0,0"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                            <!-- New Note button -->
+                            <Button Style="{StaticResource PrimaryButton}"
+                                    Content="+ New"
+                                    Padding="10,4"
+                                    FontSize="12"
+                                    Margin="0,0,6,0"
+                                    Click="NewNote_Click"
+                                    ToolTip="New note (Ctrl+Alt+N)"/>
+
+                            <!-- Library button -->
+                            <Button Style="{StaticResource IconButton}"
+                                    Click="OpenLibrary_Click"
+                                    ToolTip="All notes (Ctrl+Alt+A)">
+                                <Path Data="M1,2 L11,2 M1,6 L11,6 M1,10 L8,10"
+                                      Stroke="{StaticResource SecondaryTextBrush}"
+                                      StrokeThickness="1.5" Width="12" Height="12"/>
+                            </Button>
+
+                            <!-- Settings button -->
+                            <Button Style="{StaticResource IconButton}"
+                                    Click="OpenSettings_Click"
+                                    ToolTip="Settings">
+                                <Path Data="M5,1 L7,1 L7.3,2.5 L8.5,3 L9.8,2.2 L11.2,3.6 L10.4,4.9 L10.9,6.1 L12.4,6.4 L12.4,8.4 L10.9,8.7 L10.4,9.9 L11.2,11.2 L9.8,12.6 L8.5,11.8 L7.3,12.3 L7,13.8 L5,13.8 L4.7,12.3 L3.5,11.8 L2.2,12.6 L0.8,11.2 L1.6,9.9 L1.1,8.7 L-0.4,8.4 L-0.4,6.4 L1.1,6.1 L1.6,4.9 L0.8,3.6 L2.2,2.2 L3.5,3 L4.7,2.5 Z"
+                                      Stroke="{StaticResource SecondaryTextBrush}"
+                                      StrokeThickness="1.2" Width="12" Height="13"/>
+                            </Button>
+                        </StackPanel>
+                    </Grid>
                 </Border>
+
+                <!-- Content Area: Notes or Empty State -->
+                <Grid Grid.Row="1">
+                    <!-- Empty state -->
+                    <Border x:Name="EmptyStatePanel"
+                            Visibility="Collapsed"
+                            Padding="20"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center">
+                        <StackPanel HorizontalAlignment="Center">
+                            <TextBlock Text="No notes yet"
+                                       Style="{StaticResource UIText}"
+                                       FontWeight="Medium"
+                                       FontSize="14"
+                                       HorizontalAlignment="Center"
+                                       Margin="0,0,0,6"/>
+                            <TextBlock Text="Click + New to create your first note"
+                                       Style="{StaticResource SecondaryText}"
+                                       HorizontalAlignment="Center"
+                                       Margin="0,0,0,16"/>
+                            <Button Content="+ Create Note"
+                                    Style="{StaticResource PrimaryButton}"
+                                    HorizontalAlignment="Center"
+                                    Click="NewNote_Click"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Notes List -->
+                    <ScrollViewer x:Name="DockScrollViewer"
+                                  Style="{StaticResource ThinScrollViewer}"
+                                  Padding="10,6">
+                        <StackPanel x:Name="NotesStackPanel">
+                            <!-- Pinned section -->
+                            <TextBlock x:Name="PinnedHeader"
+                                       Text="PINNED"
+                                       Style="{StaticResource SectionHeaderStyle}"
+                                       Margin="4,4,0,2"/>
+                            <ItemsControl x:Name="PinnedTabs"
+                                          ItemsSource="{Binding PinnedNotes, RelativeSource={RelativeSource AncestorType=Window}}"
+                                          ItemTemplate="{StaticResource DockTabTemplate}"
+                                          PreviewMouseLeftButtonUp="OnTabClicked"/>
+
+                            <!-- Notes section -->
+                            <TextBlock x:Name="NotesHeader"
+                                       Text="NOTES"
+                                       Style="{StaticResource SectionHeaderStyle}"
+                                       Margin="4,8,0,2"/>
+                            <ItemsControl x:Name="TabsList"
+                                          ItemsSource="{Binding VisibleUnpinnedNotes, RelativeSource={RelativeSource AncestorType=Window}}"
+                                          ItemTemplate="{StaticResource DockTabTemplate}"
+                                          PreviewMouseLeftButtonUp="OnTabClicked"/>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
 
                 <!-- Overflow indicator -->
                 <Border x:Name="OverflowTab"
                         Grid.Row="2"
-                        Height="40"
+                        Height="34"
                         Background="{StaticResource SurfaceBrush}"
                         BorderBrush="{StaticResource BorderBrush}"
                         BorderThickness="0,1,0,0"
                         Visibility="Collapsed"
                         Cursor="Hand"
                         MouseLeftButtonDown="OverflowTab_MouseLeftButtonDown"
-                        ToolTip="Open all notes">
-                    <TextBlock Text="+ more notes"
+                        ToolTip="Open all notes in Library">
+                    <TextBlock x:Name="OverflowText"
+                               Text="+ more notes in Library"
                                Style="{StaticResource SecondaryText}"
                                HorizontalAlignment="Center"
                                VerticalAlignment="Center"/>

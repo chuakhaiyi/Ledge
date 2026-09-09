@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 using Ledge.Native.Interop;
 using Ledge.Core.Services;
 using Ledge.Core.Models;
+using Ledge.App.Services;
 
 public partial class NoteWindow : Window
 {
@@ -39,6 +40,28 @@ public partial class NoteWindow : Window
             Top = note.Position.Y;
             Width = note.Position.Width;
             Height = note.Position.Height;
+        }
+        else
+        {
+            var screen = SystemParameters.WorkArea;
+            var edge = _settingsStore.DockEdge;
+            Width = 280;
+            Height = 320;
+            if (edge == DockEdge.Right)
+            {
+                Left = Math.Max(screen.Left + 20, screen.Right - Width - 60);
+                Top = screen.Top + 60;
+            }
+            else if (edge == DockEdge.Left)
+            {
+                Left = screen.Left + 60;
+                Top = screen.Top + 60;
+            }
+            else // Top
+            {
+                Left = (screen.Left + screen.Right - Width) / 2;
+                Top = screen.Top + 60;
+            }
         }
     }
 
@@ -78,9 +101,34 @@ public partial class NoteWindow : Window
             if (right) { handled = true; return (nint)User32.HTRIGHT; }
             if (top) { handled = true; return (nint)User32.HTTOP; }
             if (bottom) { handled = true; return (nint)User32.HTBOTTOM; }
-            if (pt.Y <= 30) { handled = true; return (nint)User32.HTCAPTION; }
+            if (pt.Y <= 30)
+            {
+                var hit = InputHitTest(pt) as DependencyObject;
+                if (IsInteractiveControl(hit))
+                {
+                    return nint.Zero;
+                }
+                handled = true;
+                return (nint)User32.HTCAPTION;
+            }
         }
         return nint.Zero;
+    }
+
+    private static bool IsInteractiveControl(DependencyObject? element)
+    {
+        while (element != null)
+        {
+            if (element is System.Windows.Controls.Primitives.ButtonBase ||
+                element is System.Windows.Controls.TextBox ||
+                element is System.Windows.Controls.ComboBox ||
+                element is System.Windows.Controls.ContextMenu)
+            {
+                return true;
+            }
+            element = System.Windows.Media.VisualTreeHelper.GetParent(element);
+        }
+        return false;
     }
 
     private void SetWindowStyle(nint hwnd)
@@ -171,6 +219,17 @@ public partial class NoteWindow : Window
         {
             _noteStore.Update(Note with { Pinned = !Note.Pinned });
         }
+    }
+
+    private void Editor_CloseRequested()
+    {
+        Close();
+    }
+
+    private void Editor_NewNoteRequested()
+    {
+        var windowManager = App.GetService<WindowManager>();
+        windowManager.CreateNewNote();
     }
 
     public void FocusEditor()

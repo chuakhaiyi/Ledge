@@ -16,5 +16,7 @@
                       Note="{Binding Note, RelativeSource={RelativeSource AncestorType=Window}}"
                       ColorChanged="Editor_ColorChanged"
                       DeleteRequested="Editor_DeleteRequested"
-                      PinToggled="Editor_PinToggled"/>
+                      PinToggled="Editor_PinToggled"
+                      CloseRequested="Editor_CloseRequested"
+                      NewNoteRequested="Editor_NewNoteRequested"/>
 </Window>

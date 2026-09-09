@@ -15,6 +15,7 @@ public sealed class SettingsStore : INotifyPropertyChanged
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public Settings Settings => _settings;
+    public string DataPath => _persistence.GetStorePath();
 
     public DockEdge DockEdge
     {

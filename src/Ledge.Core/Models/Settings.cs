@@ -3,7 +3,8 @@ namespace Ledge.Core.Models;
 public enum DockEdge
 {
     Left,
-    Right
+    Right,
+    Top
 }
 
 public enum AppTheme

@@ -21,6 +21,8 @@ public partial class NoteEditor : UserControl
     public event Action<NoteColor>? ColorChanged;
     public event Action? DeleteRequested;
     public event Action? PinToggled;
+    public event Action? CloseRequested;
+    public event Action? NewNoteRequested;
 
     private readonly ColorChip[] _colorChips;
 
@@ -81,6 +83,16 @@ public partial class NoteEditor : UserControl
         }
     }
 
+    private void NewNoteButton_Click(object sender, RoutedEventArgs e)
+    {
+        NewNoteRequested?.Invoke();
+    }
+
+    private void CloseButton_Click(object sender, RoutedEventArgs e)
+    {
+        CloseRequested?.Invoke();
+    }
+
     private void PinButton_Click(object sender, RoutedEventArgs e)
     {
         PinToggled?.Invoke();
@@ -99,6 +111,9 @@ public partial class NoteEditor : UserControl
     public void UpdatePinIndicator(bool pinned)
     {
         PinDot.Visibility = pinned ? Visibility.Visible : Visibility.Collapsed;
+        PinText.Visibility = pinned ? Visibility.Visible : Visibility.Collapsed;
+        PinIcon.Fill = pinned ? (Brush)FindResource("AccentBrush") : Brushes.Transparent;
+        PinButton.ToolTip = pinned ? "Unpin note from dock" : "Pin note to dock";
     }
 
     public void FocusEditor()

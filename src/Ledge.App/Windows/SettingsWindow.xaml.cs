@@ -18,8 +18,7 @@ public partial class SettingsWindow : Window
 
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
-        var persistence = App.GetService<FilePersistence>();
-        DataPathText.Text = persistence.GetStorePath();
+        DataPathText.Text = _settingsStore.DataPath;
     }
 
     private void Window_KeyDown(object sender, KeyEventArgs e)
@@ -32,11 +31,14 @@ public partial class SettingsWindow : Window
 
     private void OpenDataFolder_Click(object sender, RoutedEventArgs e)
     {
-        var persistence = App.GetService<FilePersistence>();
-        var folder = System.IO.Path.GetDirectoryName(persistence.GetStorePath());
+        var folder = System.IO.Path.GetDirectoryName(_settingsStore.DataPath);
         if (!string.IsNullOrEmpty(folder) && System.IO.Directory.Exists(folder))
         {
-            System.Diagnostics.Process.Start("explorer.exe", folder);
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = folder,
+                UseShellExecute = true
+            });
         }
     }
 
@@ -54,10 +56,10 @@ public partial class SettingsWindow : Window
             _settingsStore.Theme = AppTheme.System;
             _settingsStore.StartWithWindows = false;
             _settingsStore.PortableMode = false;
-            _settingsStore.NewNoteHotkey = new HotkeyBinding(1 | 2, (int)Key.N);
-            _settingsStore.LibraryHotkey = new HotkeyBinding(1 | 2, (int)Key.A);
-            _settingsStore.ArchiveHotkey = new HotkeyBinding(1 | 2, (int)Key.L);
-            _settingsStore.FocusDockHotkey = new HotkeyBinding(1 | 2, (int)Key.D);
+            _settingsStore.NewNoteHotkey = new HotkeyBinding(1 | 2, (int)VirtualKey.N);
+            _settingsStore.LibraryHotkey = new HotkeyBinding(1 | 2, (int)VirtualKey.A);
+            _settingsStore.ArchiveHotkey = new HotkeyBinding(1 | 2, (int)VirtualKey.L);
+            _settingsStore.FocusDockHotkey = new HotkeyBinding(1 | 2, (int)VirtualKey.D);
         }
     }
 

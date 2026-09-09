@@ -219,7 +219,7 @@
                                    BorderThickness="0">
                             <ScrollBar.Resources>
                                 <Style TargetType="Thumb">
-                                    <Setter Property="Background" Value="{StaticResource AshColor}"/>
+                                    <Setter Property="Background" Value="{StaticResource AshBrush}"/>
                                     <Setter Property="Opacity" Value="0.4"/>
                                     <Setter Property="Template">
                                         <Setter.Value>
@@ -393,7 +393,7 @@
     <Style x:Key="SectionHeaderStyle" TargetType="TextBlock" BasedOn="{StaticResource SecondaryText}">
         <Setter Property="FontSize" Value="12"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
-        <Setter Property="Foreground" Value="{StaticResource AshColor}"/>
+        <Setter Property="Foreground" Value="{StaticResource SecondaryTextBrush}"/>
         <Setter Property="Margin" Value="0,6,0,4"/>
         <Setter Property="Padding" Value="0,0,0,6"/>
     </Style>

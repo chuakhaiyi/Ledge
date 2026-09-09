@@ -1,12 +1,12 @@
 namespace Ledge.App.Windows;
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Interop;
-using System.Windows.Media.Animation;
-using System.Runtime.InteropServices;
 using System.Windows.Media;
 using System.Windows.Threading;
 using Ledge.Native.Interop;
@@ -22,8 +22,7 @@ public partial class DockWindow : Window
     private bool _isExpanded = false;
     private bool _isKeyboardFocused = false;
     private int _keyboardIndex = -1;
-    private DispatcherTimer? _hoverDelayTimer;
-    private bool _mouseInHotzone = false;
+    private readonly DispatcherTimer _hoverDelayTimer;
 
     public static readonly DependencyProperty PinnedNotesProperty =
         DependencyProperty.Register(nameof(PinnedNotes), typeof(System.Collections.IEnumerable), typeof(DockWindow),
@@ -33,16 +32,6 @@ public partial class DockWindow : Window
     {
         get => (System.Collections.IEnumerable)GetValue(PinnedNotesProperty);
         set => SetValue(PinnedNotesProperty, value);
-    }
-
-    public static readonly DependencyProperty UnpinnedNotesProperty =
-        DependencyProperty.Register(nameof(UnpinnedNotes), typeof(System.Collections.IEnumerable), typeof(DockWindow),
-            new PropertyMetadata(null));
-
-    public System.Collections.IEnumerable UnpinnedNotes
-    {
-        get => (System.Collections.IEnumerable)GetValue(UnpinnedNotesProperty);
-        set => SetValue(UnpinnedNotesProperty, value);
     }
 
     public static readonly DependencyProperty VisibleUnpinnedNotesProperty =
@@ -65,7 +54,7 @@ public partial class DockWindow : Window
         _hoverDelayTimer.Tick += (_, _) =>
         {
             _hoverDelayTimer.Stop();
-            if (_mouseInHotzone && !_isExpanded)
+            if (IsMouseOver && !_isExpanded)
             {
                 Expand();
             }
@@ -78,7 +67,7 @@ public partial class DockWindow : Window
                 or nameof(NoteStore.PinnedNotes)
                 or nameof(NoteStore.UnpinnedNotes))
             {
-                UpdateBindings();
+                Dispatcher.Invoke(UpdateBindings);
             }
         };
 
@@ -86,44 +75,39 @@ public partial class DockWindow : Window
         {
             if (e.PropertyName == nameof(SettingsStore.DockEdge))
             {
-                UpdatePosition();
+                Dispatcher.Invoke(() =>
+                {
+                    UpdateLayoutForEdge();
+                    UpdatePosition();
+                });
             }
         };
-
-        UpdateBindings();
-    }
-
-    private void UpdateBindings()
-    {
-        PinnedNotes = _noteStore.PinnedNotes;
-        UnpinnedNotes = _noteStore.UnpinnedNotes;
-        VisibleUnpinnedNotes = _noteStore.UnpinnedNotes.Take(8);
-        UpdateOverflowVisibility();
-        UpdatePinnedVisibility();
     }
 
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
         var hwnd = new WindowInteropHelper(this).Handle;
         SetWindowStyle(hwnd);
-        UpdatePosition();
+        UpdateLayoutForEdge();
+        Collapse();
+        UpdateBindings();
 
-        _noteStore.NoteDeleted += OnNoteDeleted;
-        _noteStore.NoteRestored += OnNoteRestored;
+        _noteStore.NoteDeleted += _ => Dispatcher.Invoke(UpdateBindings);
+        _noteStore.NoteRestored += _ => Dispatcher.Invoke(UpdateBindings);
     }
 
     private void Window_SourceInitialized(object sender, EventArgs e)
     {
-        // Window source initialized - could add additional setup here if needed
+        // Interop hooks if needed
     }
 
     private void SetWindowStyle(nint hwnd)
     {
         var exStyle = User32.GetWindowLongPtr(hwnd, User32.GWL_EXSTYLE);
-        exStyle |= User32.WS_EX_TOOLWINDOW | User32.WS_EX_TOPMOST | User32.WS_EX_NOACTIVATE;
+        exStyle |= User32.WS_EX_TOOLWINDOW | User32.WS_EX_TOPMOST;
         User32.SetWindowLongPtr(hwnd, User32.GWL_EXSTYLE, exStyle);
 
-        var margins = new DwmApi.MARGINS { cxLeftWidth = -1 };
+        var margins = new DwmApi.MARGINS { cxLeftWidth = -1, cxRightWidth = -1, cyTopHeight = -1, cyBottomHeight = -1 };
         DwmApi.DwmExtendFrameIntoClientArea(hwnd, ref margins);
     }
 
@@ -132,30 +116,128 @@ public partial class DockWindow : Window
         var screen = SystemParameters.WorkArea;
         var edge = _settingsStore.DockEdge;
 
-        if (edge == DockEdge.Right)
+        if (edge == DockEdge.Top)
         {
-            Left = screen.Right - Width;
+            var topWidth = Math.Min(620, Math.Max(400, screen.Width - 100));
+            Width = topWidth;
+            Height = _isExpanded ? 260 : 22;
+            Left = screen.Left + (screen.Width - topWidth) / 2;
+            Top = screen.Top;
+        }
+        else if (edge == DockEdge.Left)
+        {
+            Width = _isExpanded ? 260 : 20;
+            Height = screen.Height;
+            Left = screen.Left;
+            Top = screen.Top;
+        }
+        else // DockEdge.Right
+        {
+            var width = _isExpanded ? 260 : 20;
+            Width = width;
+            Height = screen.Height;
+            Left = screen.Right - width;
+            Top = screen.Top;
+        }
+    }
+
+    private void UpdateLayoutForEdge()
+    {
+        var edge = _settingsStore.DockEdge;
+        if (edge == DockEdge.Top)
+        {
+            CollapsedEdgeBar.Height = 4;
+            CollapsedEdgeBar.Width = double.NaN;
+            CollapsedEdgeBar.HorizontalAlignment = HorizontalAlignment.Stretch;
+            CollapsedEdgeBar.VerticalAlignment = VerticalAlignment.Top;
+            CollapsedView.BorderThickness = new Thickness(0, 3, 0, 0);
+
+            NotesStackPanel.Orientation = Orientation.Horizontal;
+            DockScrollViewer.HorizontalScrollBarVisibility = ScrollBarVisibility.Auto;
+            DockScrollViewer.VerticalScrollBarVisibility = ScrollBarVisibility.Disabled;
+        }
+        else if (edge == DockEdge.Left)
+        {
+            CollapsedEdgeBar.Width = 4;
+            CollapsedEdgeBar.Height = double.NaN;
+            CollapsedEdgeBar.HorizontalAlignment = HorizontalAlignment.Left;
+            CollapsedEdgeBar.VerticalAlignment = VerticalAlignment.Stretch;
+            CollapsedView.BorderThickness = new Thickness(3, 0, 0, 0);
+
+            NotesStackPanel.Orientation = Orientation.Vertical;
+            DockScrollViewer.HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled;
+            DockScrollViewer.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
+        }
+        else // Right
+        {
+            CollapsedEdgeBar.Width = 4;
+            CollapsedEdgeBar.Height = double.NaN;
+            CollapsedEdgeBar.HorizontalAlignment = HorizontalAlignment.Right;
+            CollapsedEdgeBar.VerticalAlignment = VerticalAlignment.Stretch;
+            CollapsedView.BorderThickness = new Thickness(0, 0, 3, 0);
+
+            NotesStackPanel.Orientation = Orientation.Vertical;
+            DockScrollViewer.HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled;
+            DockScrollViewer.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
+        }
+    }
+
+    public void Expand()
+    {
+        _hoverDelayTimer.Stop();
+        _isExpanded = true;
+        CollapsedView.Visibility = Visibility.Collapsed;
+        ExpandedView.Visibility = Visibility.Visible;
+        UpdatePosition();
+        UpdateBindings();
+    }
+
+    public void Collapse()
+    {
+        _hoverDelayTimer.Stop();
+        _isExpanded = false;
+        _isKeyboardFocused = false;
+        ExpandedView.Visibility = Visibility.Collapsed;
+        CollapsedView.Visibility = Visibility.Visible;
+        UpdatePosition();
+    }
+
+    private void UpdateBindings()
+    {
+        var pinned = _noteStore.PinnedNotes;
+        var unpinned = _noteStore.UnpinnedNotes;
+        var totalActive = pinned.Count + unpinned.Count;
+
+        PinnedNotes = pinned;
+        VisibleUnpinnedNotes = unpinned.Take(8);
+
+        NoteCountText.Text = $"({totalActive})";
+
+        // Headers
+        PinnedHeader.Visibility = pinned.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        PinnedTabs.Visibility = pinned.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+
+        NotesHeader.Visibility = (pinned.Count > 0 && unpinned.Count > 0) ? Visibility.Visible : Visibility.Collapsed;
+        TabsList.Visibility = unpinned.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+
+        // Empty state
+        EmptyStatePanel.Visibility = totalActive == 0 ? Visibility.Visible : Visibility.Collapsed;
+        DockScrollViewer.Visibility = totalActive > 0 ? Visibility.Visible : Visibility.Collapsed;
+
+        // Overflow
+        if (unpinned.Count > 8)
+        {
+            OverflowTab.Visibility = Visibility.Visible;
+            OverflowText.Text = $"+ {unpinned.Count - 8} more notes in Library →";
         }
         else
         {
-            Left = screen.Left;
-        }
-
-        Top = screen.Top;
-        Height = screen.Height;
-    }
-
-    private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
-    {
-        if (_isExpanded)
-        {
-            ExpandedArea.Width = 200;
+            OverflowTab.Visibility = Visibility.Collapsed;
         }
     }
 
-    private void Hotzone_MouseEnter(object sender, MouseEventArgs e)
+    private void Window_MouseEnter(object sender, MouseEventArgs e)
     {
-        _mouseInHotzone = true;
         if (!_isExpanded)
         {
             _hoverDelayTimer.Stop();
@@ -163,106 +245,67 @@ public partial class DockWindow : Window
         }
     }
 
-    private void Hotzone_MouseLeave(object sender, MouseEventArgs e)
+    private void Window_MouseLeave(object sender, MouseEventArgs e)
     {
-        _mouseInHotzone = false;
         _hoverDelayTimer.Stop();
-        if (!_isKeyboardFocused)
+        if (_isExpanded && !_isKeyboardFocused)
         {
-            Collapse();
-        }
-    }
-
-    private void Expand()
-    {
-        _isExpanded = true;
-        CollapsedEdge.Visibility = Visibility.Collapsed;
-        ExpandedArea.Visibility = Visibility.Visible;
-        Width = 220;
-
-        // Animate tabs to peek state
-        AnimateTabs(DockState.Peeked);
-    }
-
-    private void Collapse()
-    {
-        _isExpanded = false;
-        ExpandedArea.Visibility = Visibility.Collapsed;
-        CollapsedEdge.Visibility = Visibility.Visible;
-        Width = 20;
-
-        // Animate tabs to idle state
-        AnimateTabs(DockState.Idle);
-    }
-
-    private void AnimateTabs(DockState state)
-    {
-        // Animate tabs in unpinned list
-        AnimateTabsInList(TabsList, state);
-
-        // Animate tabs in pinned list
-        AnimateTabsInList(PinnedTabs, state);
-    }
-
-    private void AnimateTabsInList(ItemsControl itemsControl, DockState state)
-    {
-        if (itemsControl.ItemContainerGenerator.Status != System.Windows.Controls.Primitives.GeneratorStatus.ContainersGenerated)
-            return;
-
-        for (int i = 0; i < itemsControl.Items.Count; i++)
-        {
-            if (itemsControl.ItemContainerGenerator.ContainerFromIndex(i) is FrameworkElement container)
+            // Verify pointer really left window
+            var pos = e.GetPosition(this);
+            if (pos.X < 0 || pos.Y < 0 || pos.X >= ActualWidth || pos.Y >= ActualHeight)
             {
-                if (FindTabControl(container) is DockTab tab)
-                {
-                    tab.SetState(state);
-                }
+                Collapse();
             }
         }
     }
 
-    private DockTab? FindTabControl(FrameworkElement element)
+    private void Window_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (element is DockTab tab) return tab;
-        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(element); i++)
+        if (!_isExpanded)
         {
-            var child = VisualTreeHelper.GetChild(element, i) as FrameworkElement;
-            if (child != null)
-            {
-                var result = FindTabControl(child);
-                if (result != null) return result;
-            }
+            Expand();
+            e.Handled = true;
         }
-        return null;
     }
 
-    private void UpdateOverflowVisibility()
+    private void OnTabClicked(object sender, MouseButtonEventArgs e)
     {
-        var unpinnedCount = _noteStore.UnpinnedNotes.Count;
-        var totalVisible = _noteStore.PinnedNotes.Count + Math.Min(unpinnedCount, 8);
-        OverflowTab.Visibility = unpinnedCount > 8 ? Visibility.Visible : Visibility.Collapsed;
+        var element = e.OriginalSource as DependencyObject;
+        while (element != null && element != sender)
+        {
+            if (element is FrameworkElement fe && fe.DataContext is Note note)
+            {
+                var windowManager = App.GetService<WindowManager>();
+                windowManager.ShowNoteWindow(note);
+                e.Handled = true;
+                return;
+            }
+            element = VisualTreeHelper.GetParent(element);
+        }
     }
 
-    private void UpdatePinnedVisibility()
+    private void NewNote_Click(object sender, RoutedEventArgs e)
     {
-        var hasPinned = _noteStore.PinnedNotes.Count > 0;
-        PinnedTabs.Visibility = hasPinned ? Visibility.Visible : Visibility.Collapsed;
+        var windowManager = App.GetService<WindowManager>();
+        windowManager.CreateNewNote();
+    }
+
+    private void OpenLibrary_Click(object sender, RoutedEventArgs e)
+    {
+        var windowManager = App.GetService<WindowManager>();
+        windowManager.ShowLibrary();
+    }
+
+    private void OpenSettings_Click(object sender, RoutedEventArgs e)
+    {
+        var windowManager = App.GetService<WindowManager>();
+        windowManager.ShowSettings();
     }
 
     private void OverflowTab_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         var windowManager = App.GetService<WindowManager>();
         windowManager.ShowLibrary();
-    }
-
-    private void OnNoteDeleted(Note note)
-    {
-        UpdateBindings();
-    }
-
-    private void OnNoteRestored(Note note)
-    {
-        UpdateBindings();
     }
 
     public void FocusDock()
@@ -274,126 +317,64 @@ public partial class DockWindow : Window
 
         _isKeyboardFocused = true;
         _keyboardIndex = 0;
-        UpdateKeyboardSelection();
-
-        // Ensure focus for key events
         Focus();
     }
 
     private void Window_KeyDown(object sender, KeyEventArgs e)
     {
+        if (e.Key == Key.Escape)
+        {
+            Collapse();
+            e.Handled = true;
+            return;
+        }
+
         if (!_isKeyboardFocused) return;
 
         var totalTabs = _noteStore.PinnedNotes.Count + Math.Min(_noteStore.UnpinnedNotes.Count, 8);
+        if (totalTabs == 0) return;
 
         switch (e.Key)
         {
             case Key.Up:
+            case Key.Left:
                 _keyboardIndex = Math.Max(0, _keyboardIndex - 1);
-                UpdateKeyboardSelection();
                 e.Handled = true;
                 break;
             case Key.Down:
+            case Key.Right:
                 _keyboardIndex = Math.Min(totalTabs - 1, _keyboardIndex + 1);
-                UpdateKeyboardSelection();
                 e.Handled = true;
                 break;
             case Key.Home:
                 _keyboardIndex = 0;
-                UpdateKeyboardSelection();
                 e.Handled = true;
                 break;
             case Key.End:
                 _keyboardIndex = totalTabs - 1;
-                UpdateKeyboardSelection();
                 e.Handled = true;
                 break;
             case Key.Enter:
                 OpenSelectedTab();
                 e.Handled = true;
                 break;
-            case Key.Escape:
-                _isKeyboardFocused = false;
-                _keyboardIndex = -1;
-                ClearKeyboardSelection();
-                Collapse();
-                e.Handled = true;
-                break;
-        }
-    }
-
-    private void UpdateKeyboardSelection()
-    {
-        // Clear previous selection
-        ClearKeyboardSelection();
-
-        var totalTabs = _noteStore.PinnedNotes.Count + Math.Min(_noteStore.UnpinnedNotes.Count, 8);
-        if (_keyboardIndex < 0 || _keyboardIndex >= totalTabs) return;
-
-        // Find and highlight the selected tab
-        HighlightTabAtIndex(_keyboardIndex, true);
-    }
-
-    private void ClearKeyboardSelection()
-    {
-        // Clear highlight from all tabs
-        HighlightTabAtIndex(-1, false);
-    }
-
-    private void HighlightTabAtIndex(int index, bool highlight)
-    {
-        var pinnedCount = _noteStore.PinnedNotes.Count;
-
-        // Check pinned tabs first
-        if (index < pinnedCount)
-        {
-            if (PinnedTabs.ItemContainerGenerator.Status == System.Windows.Controls.Primitives.GeneratorStatus.ContainersGenerated)
-            {
-                if (PinnedTabs.ItemContainerGenerator.ContainerFromIndex(index) is FrameworkElement container)
-                {
-                    if (FindTabControl(container) is DockTab tab)
-                    {
-                        tab.SetKeyboardHighlight(highlight);
-                    }
-                }
-            }
-        }
-        else
-        {
-            // Check unpinned tabs
-            var unpinnedIndex = index - pinnedCount;
-            var unpinnedCount = Math.Min(_noteStore.UnpinnedNotes.Count, 8);
-
-            if (unpinnedIndex < unpinnedCount)
-            {
-                if (TabsList.ItemContainerGenerator.Status == System.Windows.Controls.Primitives.GeneratorStatus.ContainersGenerated)
-                {
-                    if (TabsList.ItemContainerGenerator.ContainerFromIndex(unpinnedIndex) is FrameworkElement container)
-                    {
-                        if (FindTabControl(container) is DockTab tab)
-                        {
-                            tab.SetKeyboardHighlight(highlight);
-                        }
-                    }
-                }
-            }
         }
     }
 
     private void OpenSelectedTab()
     {
-        var pinnedCount = _noteStore.PinnedNotes.Count;
-        Note? targetNote = null;
+        var pinned = _noteStore.PinnedNotes;
+        var unpinned = _noteStore.UnpinnedNotes;
 
-        if (_keyboardIndex < pinnedCount)
+        Note? targetNote = null;
+        if (_keyboardIndex >= 0 && _keyboardIndex < pinned.Count)
         {
-            targetNote = _noteStore.PinnedNotes[_keyboardIndex];
+            targetNote = pinned[_keyboardIndex];
         }
         else
         {
-            var unpinnedIndex = _keyboardIndex - pinnedCount;
-            var unpinned = _noteStore.UnpinnedNotes;
-            if (unpinnedIndex < unpinned.Count)
+            var unpinnedIndex = _keyboardIndex - pinned.Count;
+            if (unpinnedIndex >= 0 && unpinnedIndex < unpinned.Count)
             {
                 targetNote = unpinned[unpinnedIndex];
             }

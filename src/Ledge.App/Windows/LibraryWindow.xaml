@@ -13,8 +13,7 @@
         KeyDown="Window_KeyDown">
     <Window.Resources>
         <local:NoteRowConverter x:Key="NoteRowConverter"/>
-        <ObjectDataProvider x:Key="SortModes" MethodName="GetValues" ObjectType="{x:Type models:NoteSortMode}"/>
-        <Style x:Key="NotesListStyle" TargetType="ListView" BasedOn="{StaticResource NotesListStyle}">
+        <Style x:Key="NotesListStyle" TargetType="ListView" BasedOn="{StaticResource NotesListView}">
             <Setter Property="VirtualizingStackPanel.IsVirtualizing" Value="True"/>
             <Setter Property="VirtualizingStackPanel.VirtualizationMode" Value="Recycling"/>
         </Style>
@@ -36,10 +35,11 @@
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
-            <!-- Title + Sort -->
-            <Grid Grid.Row="0">
+            <!-- Title + New Note + Sort -->
+            <Grid Grid.Row="0" Margin="0,0,0,18">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
@@ -49,14 +49,20 @@
                            FontSize="26"
                            VerticalAlignment="Center"/>
 
-                <ComboBox Grid.Column="1"
-                          ItemsSource="{Binding Source={StaticResource SortModes}}"
+                <Button Grid.Column="1"
+                        Content="+ New Note"
+                        Style="{StaticResource PrimaryButton}"
+                        Margin="0,0,12,0"
+                        VerticalAlignment="Center"
+                        Click="NewNote_Click"/>
+
+                <ComboBox x:Name="SortComboBox"
+                          Grid.Column="2"
                           SelectedItem="{Binding SortMode, RelativeSource={RelativeSource AncestorType=Window}}"
                           Width="140"
                           Style="{StaticResource SettingsComboBox}"
                           SelectionChanged="SortComboBox_SelectionChanged"
-                          VerticalAlignment="Center"
-                          Margin="0,0,0,18"/>
+                          VerticalAlignment="Center"/>
             </Grid>
 
             <!-- Search -->

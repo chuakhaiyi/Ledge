@@ -1,11 +1,13 @@
 namespace Ledge.App.Controls;
 
+using System;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media.Animation;
 using System.Windows.Input;
 using System.Windows.Media;
 using Ledge.Core.Models;
+using Ledge.App.Services;
 
 public partial class DockTab : UserControl
 {
@@ -21,7 +23,7 @@ public partial class DockTab : UserControl
 
     public static readonly DependencyProperty IndexProperty =
         DependencyProperty.Register(nameof(Index), typeof(int), typeof(DockTab),
-            new PropertyMetadata(0, OnIndexChanged));
+            new PropertyMetadata(0));
 
     public int Index
     {
@@ -42,15 +44,9 @@ public partial class DockTab : UserControl
     public event Action<Note>? TabClicked;
     public event Action<Note>? TabHovered;
 
-    private readonly Storyboard _peekStoryboard;
-    private readonly Storyboard _collapseStoryboard;
-    private DockState _state = DockState.Idle;
-
     public DockTab()
     {
         InitializeComponent();
-        _peekStoryboard = (Storyboard)Resources["PeekAnimation"];
-        _collapseStoryboard = (Storyboard)Resources["CollapseAnimation"];
     }
 
     private static void OnNoteChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -58,14 +54,6 @@ public partial class DockTab : UserControl
         if (d is DockTab tab && e.NewValue is Note note)
         {
             tab.UpdateVisuals(note);
-        }
-    }
-
-    private static void OnIndexChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-        if (d is DockTab tab)
-        {
-            tab.ApplyTransform();
         }
     }
 
@@ -79,87 +67,36 @@ public partial class DockTab : UserControl
 
     private void UpdateVisuals(Note note)
     {
-        TabBorder.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(note.Color.ToHex()));
-        PeekWord.Text = GetFirstWord(note.Text);
-        FullText.Text = note.Text;
-        FullMeta.Text = $"{note.Color} · {GetRelativeTime(note.ModifiedAt)}";
-        PinnedDot.Visibility = note.Pinned ? Visibility.Visible : Visibility.Collapsed;
-        ApplyTransform();
-    }
+        try
+        {
+            TabBorder.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(note.Color.ToHex()));
+        }
+        catch
+        {
+            TabBorder.Background = new SolidColorBrush(Color.FromRgb(199, 210, 184));
+        }
 
-    private static string GetFirstWord(string text)
-    {
-        var trimmed = text.Trim();
-        var spaceIndex = trimmed.IndexOf(' ');
-        return spaceIndex > 0 ? trimmed[..spaceIndex] : trimmed;
+        var lines = note.Text.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        HeaderWord.Text = lines.Length > 0 ? lines[0].Trim() : "Empty note";
+        BodyText.Text = lines.Length > 1 ? string.Join(" ", lines.Skip(1)).Trim() : (lines.Length > 0 ? lines[0].Trim() : "");
+        TimestampText.Text = GetRelativeTime(note.ModifiedAt);
+        PinnedDot.Visibility = note.Pinned ? Visibility.Visible : Visibility.Collapsed;
+        ToolTip = string.IsNullOrWhiteSpace(note.Text) ? "Empty note" : note.Text;
     }
 
     private static string GetRelativeTime(DateTime dt)
     {
         var diff = DateTime.UtcNow - dt;
         if (diff.TotalMinutes < 1) return "just now";
-        if (diff.TotalHours < 1) return $"{(int)diff.TotalMinutes}m ago";
-        if (diff.TotalDays < 1) return $"{(int)diff.TotalHours}h ago";
-        if (diff.TotalDays < 7) return $"{(int)diff.TotalDays}d ago";
+        if (diff.TotalHours < 1) return $"{(int)diff.TotalMinutes}m";
+        if (diff.TotalDays < 1) return $"{(int)diff.TotalHours}h";
+        if (diff.TotalDays < 7) return $"{(int)diff.TotalDays}d";
         return dt.ToString("MMM d");
-    }
-
-    private void ApplyTransform()
-    {
-        var translate = (TranslateTransform)((TransformGroup)RenderTransform).Children[0];
-        var rotate = (RotateTransform)((TransformGroup)RenderTransform).Children[1];
-
-        if (_state == DockState.Idle)
-        {
-            translate.X = 198;
-            translate.Y = Index * 14;
-            rotate.Angle = Index * -2.2;
-        }
-        else if (_state == DockState.Peeked)
-        {
-            translate.X = 112;
-            translate.Y = Index * 16;
-            rotate.Angle = Index * -1.4;
-        }
     }
 
     public void SetState(DockState state, bool animate = true)
     {
-        _state = state;
-
-        if (animate)
-        {
-            if (state == DockState.Peeked || state == DockState.Expanded)
-            {
-                _peekStoryboard.Begin(this);
-            }
-            else
-            {
-                _collapseStoryboard.Begin(this);
-            }
-        }
-
-        ApplyTransform();
-        UpdateContentVisibility();
-    }
-
-    private void UpdateContentVisibility()
-    {
-        if (_state == DockState.Idle)
-        {
-            PeekWord.Opacity = 0;
-            FullContent.Opacity = 0;
-        }
-        else if (_state == DockState.Peeked)
-        {
-            PeekWord.Opacity = 1;
-            FullContent.Opacity = 0;
-        }
-        else if (_state == DockState.Expanded)
-        {
-            PeekWord.Opacity = 0;
-            FullContent.Opacity = 1;
-        }
+        // For compatibility with dock window
     }
 
     private void TabBorder_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -167,12 +104,17 @@ public partial class DockTab : UserControl
         if (Note != null)
         {
             TabClicked?.Invoke(Note);
+            var windowManager = App.GetService<WindowManager>();
+            windowManager.ShowNoteWindow(Note);
+            e.Handled = true;
         }
     }
 
     private void TabBorder_MouseEnter(object sender, MouseEventArgs e)
     {
-        if (Note != null && _state != DockState.Expanded)
+        TabShadow.Opacity = 0.35;
+        TabShadow.BlurRadius = 12;
+        if (Note != null)
         {
             TabHovered?.Invoke(Note);
         }
@@ -180,7 +122,8 @@ public partial class DockTab : UserControl
 
     private void TabBorder_MouseLeave(object sender, MouseEventArgs e)
     {
-        // Handled by parent hotzone
+        TabShadow.Opacity = 0.15;
+        TabShadow.BlurRadius = 8;
     }
 
     public void SetKeyboardHighlight(bool highlight)
@@ -188,12 +131,12 @@ public partial class DockTab : UserControl
         if (highlight)
         {
             TabBorder.BorderBrush = (Brush)FindResource("AccentBrush");
-            TabBorder.BorderThickness = new Thickness(0, 0, 2, 0);
+            TabBorder.BorderThickness = new Thickness(2);
         }
         else
         {
-            TabBorder.BorderBrush = null;
-            TabBorder.BorderThickness = new Thickness(0);
+            TabBorder.BorderBrush = (Brush)FindResource("BorderBrush");
+            TabBorder.BorderThickness = new Thickness(1);
         }
     }
 }

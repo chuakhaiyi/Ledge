@@ -19,6 +19,7 @@
     <SolidColorBrush x:Key="EdgeRuleBrush" Color="#8A8D91" Opacity="0.35"/>
     <SolidColorBrush x:Key="FocusRingBrush" Color="{StaticResource CopperColor}"/>
     <SolidColorBrush x:Key="DisabledBrush" Color="#8A8D91" Opacity="0.5"/>
+    <SolidColorBrush x:Key="AshBrush" Color="{StaticResource AshColor}"/>
     <SolidColorBrush x:Key="OverlayBrush" Color="#EAE6DC" Opacity="0.06"/>
     <SolidColorBrush x:Key="ShadowBrush" Color="#000000" Opacity="0.45"/>
 

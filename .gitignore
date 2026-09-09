@@ -35,3 +35,5 @@ Thumbs.db
 # Local development
 .local/
 *.local
+plan/
+tools/

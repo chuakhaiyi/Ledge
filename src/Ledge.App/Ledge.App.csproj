@@ -20,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Resource Include="..\..\assets\icon.ico" />
+    <Resource Include="Resources\icon.ico" />
+    <Resource Include="..\..\assets\icon.ico" Link="assets\icon.ico" />
   </ItemGroup>
 </Project>
