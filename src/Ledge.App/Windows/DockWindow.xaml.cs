@@ -20,6 +20,7 @@ public partial class DockWindow : Window
     private readonly NoteStore _noteStore;
     private readonly SettingsStore _settingsStore;
     private bool _isExpanded = false;
+    private bool _isPeeking = false;
     private bool _isKeyboardFocused = false;
     private int _keyboardIndex = -1;
     private readonly DispatcherTimer _hoverDelayTimer;
@@ -54,6 +55,16 @@ public partial class DockWindow : Window
         set => SetValue(CollapsedNotesProperty, value);
     }
 
+    public static readonly DependencyProperty IsPeekingProperty =
+        DependencyProperty.Register(nameof(IsPeeking), typeof(bool), typeof(DockWindow),
+            new PropertyMetadata(false));
+
+    public bool IsPeeking
+    {
+        get => (bool)GetValue(IsPeekingProperty);
+        set => SetValue(IsPeekingProperty, value);
+    }
+
     public DockWindow(NoteStore noteStore, SettingsStore settingsStore)
     {
         _noteStore = noteStore;
@@ -64,9 +75,9 @@ public partial class DockWindow : Window
         _hoverDelayTimer.Tick += (_, _) =>
         {
             _hoverDelayTimer.Stop();
-            if (IsMouseOver && !_isExpanded)
+            if (IsMouseOver && !_isExpanded && !_isPeeking)
             {
-                Expand();
+                Peek();
             }
         };
 
@@ -130,20 +141,20 @@ public partial class DockWindow : Window
         {
             var topWidth = Math.Min(620, Math.Max(400, screen.Width - 100));
             Width = topWidth;
-            Height = _isExpanded ? 260 : 72;
+            Height = _isExpanded ? 260 : _isPeeking ? 120 : 72;
             Left = screen.Left + (screen.Width - topWidth) / 2;
             Top = screen.Top;
         }
         else if (edge == DockEdge.Left)
         {
-            Width = _isExpanded ? 260 : 72;
+            Width = _isExpanded ? 260 : _isPeeking ? 180 : 72;
             Height = screen.Height;
             Left = screen.Left;
             Top = screen.Top;
         }
         else // DockEdge.Right
         {
-            var width = _isExpanded ? 260 : 72;
+            var width = _isExpanded ? 260 : _isPeeking ? 180 : 72;
             Width = width;
             Height = screen.Height;
             Left = screen.Right - width;
@@ -156,7 +167,7 @@ public partial class DockWindow : Window
         var edge = _settingsStore.DockEdge;
         if (edge == DockEdge.Top)
         {
-            Height = _isExpanded ? 260 : 72;
+            Height = _isExpanded ? 260 : _isPeeking ? 120 : 72;
             SetCollapsedOrientation(Orientation.Horizontal);
             CollapsedTabs.HorizontalAlignment = HorizontalAlignment.Center;
             CollapsedTabs.VerticalAlignment = VerticalAlignment.Bottom;
@@ -207,6 +218,8 @@ public partial class DockWindow : Window
     public void Expand()
     {
         _hoverDelayTimer.Stop();
+        _isPeeking = false;
+        IsPeeking = false;
         _isExpanded = true;
         CollapsedView.Visibility = Visibility.Collapsed;
         ExpandedView.Visibility = Visibility.Visible;
@@ -217,10 +230,23 @@ public partial class DockWindow : Window
     public void Collapse()
     {
         _hoverDelayTimer.Stop();
+        _isPeeking = false;
+        IsPeeking = false;
         _isExpanded = false;
         _isKeyboardFocused = false;
         ExpandedView.Visibility = Visibility.Collapsed;
         CollapsedView.Visibility = Visibility.Visible;
+        UpdatePosition();
+    }
+
+    private void Peek()
+    {
+        _hoverDelayTimer.Stop();
+        _isPeeking = true;
+        IsPeeking = true;
+        _isExpanded = false;
+        CollapsedView.Visibility = Visibility.Visible;
+        ExpandedView.Visibility = Visibility.Collapsed;
         UpdatePosition();
     }
 
@@ -272,7 +298,7 @@ public partial class DockWindow : Window
     private void Window_MouseLeave(object sender, MouseEventArgs e)
     {
         _hoverDelayTimer.Stop();
-        if (_isExpanded && !_isKeyboardFocused)
+        if ((_isExpanded || _isPeeking) && !_isKeyboardFocused)
         {
             // Verify pointer really left window
             var pos = e.GetPosition(this);

@@ -56,6 +56,7 @@ public partial class NoteEditor : UserControl
         {
             editor.TextBox.Text = note.Text;
             editor.UpdateColorIndicator(note.Color);
+            editor.UpdateColorSelection(note.Color);
             editor.UpdatePinIndicator(note.Pinned);
         }
     }
@@ -106,6 +107,14 @@ public partial class NoteEditor : UserControl
     public void UpdateColorIndicator(NoteColor color)
     {
         ColorIndicator.Fill = new SolidColorBrush((Color)ColorConverter.ConvertFromString(color.ToHex()));
+    }
+
+    private void UpdateColorSelection(NoteColor color)
+    {
+        foreach (var chip in _colorChips)
+        {
+            chip.IsSelected = chip.Color == color;
+        }
     }
 
     public void UpdatePinIndicator(bool pinned)

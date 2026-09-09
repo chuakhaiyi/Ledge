@@ -4,7 +4,7 @@ using System.Windows;
 using Ledge.Core.Services;
 using Ledge.Core.Models;
 
-public sealed class ThemeManager
+public sealed class ThemeManager : IDisposable
 {
     private SettingsStore? _settingsStore;
     private ResourceDictionary? _lightDict;
@@ -56,6 +56,16 @@ public sealed class ThemeManager
         {
             dicts.Add(_lightDict!);
         }
+    }
+
+    public void Dispose()
+    {
+        if (_settingsStore != null)
+        {
+            _settingsStore.PropertyChanged -= OnSettingsChanged;
+        }
+
+        SystemParameters.StaticPropertyChanged -= OnSystemThemeChanged;
     }
 
     private static AppTheme GetSystemTheme()

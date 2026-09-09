@@ -10,6 +10,7 @@ public sealed class SystemTrayService : IDisposable
     private readonly TaskbarIcon _notifyIcon;
     private WindowManager? _windowManager;
     private bool _iconSet = false;
+    private bool _disposed;
 
     public SystemTrayService()
     {
@@ -177,7 +178,12 @@ public sealed class SystemTrayService : IDisposable
 
     public void Dispose()
     {
-        _notifyIcon?.Dispose();
+        if (_disposed) return;
+        _disposed = true;
+
+        _notifyIcon.ContextMenu = null;
+        _notifyIcon.Visibility = Visibility.Hidden;
+        _notifyIcon.Dispose();
     }
 }
 

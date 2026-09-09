@@ -32,7 +32,8 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <local:DockTab Note="{Binding}" PeekOnly="True"/>
+                            <local:DockTab Note="{Binding}"
+                                           PeekOnly="True"/>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>

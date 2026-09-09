@@ -6,6 +6,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
+using System.Windows.Media.Effects;
 using Ledge.Core.Models;
 using Ledge.App.Services;
 
@@ -57,6 +59,19 @@ public partial class DockTab : UserControl
     public DockTab()
     {
         InitializeComponent();
+
+        TabBorder.RenderTransform = CreateHoverTransform();
+        TabBorder.RenderTransformOrigin = new Point(0.5, 0.5);
+        PeekBorder.RenderTransform = CreateHoverTransform();
+        PeekBorder.RenderTransformOrigin = new Point(0.5, 0.5);
+    }
+
+    private static TransformGroup CreateHoverTransform()
+    {
+        var transform = new TransformGroup();
+        transform.Children.Add(new ScaleTransform(1, 1));
+        transform.Children.Add(new TranslateTransform());
+        return transform;
     }
 
     private static void OnNoteChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -96,7 +111,7 @@ public partial class DockTab : UserControl
         }
         catch
         {
-            TabBorder.Background = new SolidColorBrush(Color.FromRgb(199, 210, 184));
+            TabBorder.Background = (Brush)FindResource("MossNoteBrush");
         }
 
         var lines = note.Text.Split('\n', StringSplitOptions.RemoveEmptyEntries);
@@ -137,8 +152,7 @@ public partial class DockTab : UserControl
 
     private void TabBorder_MouseEnter(object sender, MouseEventArgs e)
     {
-        TabShadow.Opacity = 0.35;
-        TabShadow.BlurRadius = 12;
+        AnimateHover(true);
         if (Note != null)
         {
             TabHovered?.Invoke(Note);
@@ -147,8 +161,32 @@ public partial class DockTab : UserControl
 
     private void TabBorder_MouseLeave(object sender, MouseEventArgs e)
     {
-        TabShadow.Opacity = 0.15;
-        TabShadow.BlurRadius = 8;
+        AnimateHover(false);
+    }
+
+    private void AnimateHover(bool isHovered)
+    {
+        var duration = SystemParameters.ClientAreaAnimation
+            ? new Duration(TimeSpan.FromMilliseconds(180))
+            : new Duration(TimeSpan.Zero);
+        var easing = new CubicEase { EasingMode = EasingMode.EaseOut };
+        var targetScale = isHovered ? 1.025 : 1.0;
+        var targetOffset = isHovered ? -2.0 : 0.0;
+
+        foreach (var border in new[] { TabBorder, PeekBorder })
+        {
+            var group = (TransformGroup)border.RenderTransform;
+            var scale = (ScaleTransform)group.Children[0];
+            var translate = (TranslateTransform)group.Children[1];
+            scale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(targetScale, duration) { EasingFunction = easing });
+            scale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(targetScale, duration) { EasingFunction = easing });
+            translate.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(targetOffset, duration) { EasingFunction = easing });
+        }
+
+        TabShadow.BeginAnimation(DropShadowEffect.OpacityProperty,
+            new DoubleAnimation(isHovered ? 0.28 : 0.15, duration) { EasingFunction = easing });
+        TabShadow.BeginAnimation(DropShadowEffect.BlurRadiusProperty,
+            new DoubleAnimation(isHovered ? 16 : 8, duration) { EasingFunction = easing });
     }
 
     public void SetKeyboardHighlight(bool highlight)

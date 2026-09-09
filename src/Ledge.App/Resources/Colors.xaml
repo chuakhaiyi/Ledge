@@ -23,6 +23,7 @@
     <SolidColorBrush x:Key="AshBrush" Color="{StaticResource AshColor}"/>
     <SolidColorBrush x:Key="OverlayBrush" Color="#1B1D22" Opacity="0.06"/>
     <SolidColorBrush x:Key="ShadowBrush" Color="#000000" Opacity="0.4"/>
+    <SolidColorBrush x:Key="MossNoteBrush" Color="{StaticResource MossColor}"/>
 
     <!-- Note Colors -->
     <Color x:Key="ButterColor">#F0DFAE</Color>

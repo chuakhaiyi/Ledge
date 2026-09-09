@@ -56,11 +56,17 @@
                                 Style="{StaticResource IconButton}"
                                 Click="ColorButton_Click"
                                 ToolTip="Change color (Ctrl+.)">
-                            <Grid Width="16" Height="16">
-                                <Ellipse x:Name="ColorIndicator" Fill="#C7D2B8" Stroke="{StaticResource BorderBrush}" StrokeThickness="1"/>
+                            <Grid Width="18" Height="18">
+                                <Ellipse x:Name="ColorIndicator" Fill="{StaticResource MossNoteBrush}" Stroke="{StaticResource PrimaryTextBrush}" StrokeThickness="1"/>
                             </Grid>
                             <Button.ContextMenu>
-                                <ContextMenu x:Name="ColorPopup" PlacementTarget="{Binding ElementName=ColorButton}" Placement="Bottom">
+                                <ContextMenu x:Name="ColorPopup"
+                                             PlacementTarget="{Binding ElementName=ColorButton}"
+                                             Placement="Bottom"
+                                             Background="{StaticResource SurfaceBrush}"
+                                             BorderBrush="{StaticResource BorderBrush}"
+                                             BorderThickness="1"
+                                             Padding="8">
                                     <ContextMenu.ItemsPanel>
                                         <ItemsPanelTemplate>
                                             <UniformGrid Rows="1" Columns="8"/>
@@ -68,10 +74,22 @@
                                     </ContextMenu.ItemsPanel>
                                     <ContextMenu.ItemTemplate>
                                         <DataTemplate>
-                                            <Border Width="28" Height="28" Margin="4" CornerRadius="4" Background="{Binding ColorBrush}"
+                                            <Border Width="30" Height="30" Margin="3" CornerRadius="15" Background="{Binding ColorBrush}"
                                                     BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
                                                     Cursor="Hand" ToolTip="{Binding ColorName}"
                                                     MouseLeftButtonDown="ColorChip_Click">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Opacity" Value="0.82"/>
+                                                        <Style.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter Property="Opacity" Value="1"/>
+                                                                <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                                                                <Setter Property="BorderThickness" Value="2"/>
+                                                            </Trigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
                                             </Border>
                                         </DataTemplate>
                                     </ContextMenu.ItemTemplate>

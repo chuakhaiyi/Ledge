@@ -7,8 +7,8 @@
              Cursor="Hand">
     <Grid>
     <Border x:Name="TabBorder"
-            Background="#C7D2B8"
-            CornerRadius="6"
+            Background="{StaticResource MossNoteBrush}"
+            CornerRadius="10"
             BorderBrush="{StaticResource BorderBrush}"
             BorderThickness="1"
             Padding="10,8"
@@ -53,7 +53,7 @@
                            FontFamily="{StaticResource UIFont}"
                            FontSize="12"
                            FontWeight="SemiBold"
-                           Foreground="#1B1D22"
+                           Foreground="{StaticResource PrimaryTextBrush}"
                            TextTrimming="CharacterEllipsis"/>
 
                 <!-- Timestamp -->
@@ -62,7 +62,7 @@
                            Text="just now"
                            FontFamily="{StaticResource UIFont}"
                            FontSize="10"
-                           Foreground="#1B1D22"
+                           Foreground="{StaticResource PrimaryTextBrush}"
                            Opacity="0.5"
                            VerticalAlignment="Center"/>
             </Grid>
@@ -73,7 +73,7 @@
                        Text=""
                        FontFamily="{StaticResource UIFont}"
                        FontSize="12"
-                       Foreground="#1B1D22"
+                       Foreground="{StaticResource PrimaryTextBrush}"
                        LineHeight="16"
                        TextWrapping="Wrap"
                        MaxHeight="48"
@@ -83,8 +83,8 @@
     <Border x:Name="PeekBorder"
             Width="58"
             Height="28"
-            Background="#C7D2B8"
-            CornerRadius="8"
+            Background="{StaticResource MossNoteBrush}"
+            CornerRadius="10"
             BorderBrush="{StaticResource BorderBrush}"
             BorderThickness="1,1,0,1"
             HorizontalAlignment="Right"
@@ -99,7 +99,7 @@
                    FontFamily="{StaticResource UIFont}"
                    FontSize="10"
                    FontWeight="SemiBold"
-                   Foreground="#1B1D22"
+                   Foreground="{StaticResource PrimaryTextBrush}"
                    Text="Note"
                    TextTrimming="CharacterEllipsis"/>
     </Border>

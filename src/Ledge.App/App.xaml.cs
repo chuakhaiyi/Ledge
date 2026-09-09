@@ -13,6 +13,10 @@ public partial class App : Application
     private SettingsStore? _settingsStore;
     private FilePersistence? _persistence;
     private WindowManager? _windowManager;
+    private HotkeyManager? _hotkeyManager;
+    private ThemeManager? _themeManager;
+    private SystemTrayService? _systemTray;
+    private bool _isExiting;
 
     public App()
     {
@@ -39,17 +43,17 @@ public partial class App : Application
         _windowManager = _services.GetRequiredService<WindowManager>();
         _windowManager.Initialize(_noteStore, _settingsStore);
 
-        var themeManager = _services.GetRequiredService<ThemeManager>();
-        themeManager.Initialize(_settingsStore);
+        _themeManager = _services.GetRequiredService<ThemeManager>();
+        _themeManager.Initialize(_settingsStore);
 
-        var hotkeyManager = _services.GetRequiredService<HotkeyManager>();
-        hotkeyManager.Initialize(_settingsStore, _windowManager);
+        _hotkeyManager = _services.GetRequiredService<HotkeyManager>();
+        _hotkeyManager.Initialize(_settingsStore, _windowManager);
 
         var fullscreenDetector = _services.GetRequiredService<FullscreenDetector>();
         fullscreenDetector.Initialize(_windowManager);
 
-        var systemTray = _services.GetRequiredService<SystemTrayService>();
-        systemTray.Initialize(_windowManager);
+        _systemTray = _services.GetRequiredService<SystemTrayService>();
+        _systemTray.Initialize(_windowManager);
 
         _settingsStore.ApplyStartupSettings();
         _windowManager.ShowDock();
@@ -57,8 +61,15 @@ public partial class App : Application
 
     private void Application_Exit(object sender, ExitEventArgs e)
     {
+        if (_isExiting) return;
+        _isExiting = true;
+
+        _systemTray?.Dispose();
+        _hotkeyManager?.Dispose();
+        _themeManager?.Dispose();
         _noteStore?.ForceSave();
         _settingsStore?.SaveAsync().Wait();
+        _services.Dispose();
     }
 
     public static T GetService<T>() where T : notnull
