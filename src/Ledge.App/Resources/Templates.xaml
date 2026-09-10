@@ -9,36 +9,7 @@
 
     <!-- Dock Tab Template -->
     <DataTemplate x:Key="DockTabTemplate">
-        <local:DockTab Note="{Binding}"
-                       Index="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ItemsControl}, Converter={StaticResource ItemIndexConverter}}"
-                       IsPinned="{Binding Pinned}"/>
-    </DataTemplate>
-
-    <!-- Color Chip for Palette -->
-    <DataTemplate x:Key="ColorChipTemplate" DataType="{x:Type local:ColorChip}">
-        <Border Width="24" Height="24"
-                CornerRadius="4"
-                Background="{Binding ColorBrush}"
-                BorderBrush="{StaticResource BorderBrush}"
-                BorderThickness="1"
-                ToolTip="{Binding ColorName}"
-                Cursor="Hand">
-            <Border.Style>
-                <Style TargetType="Border">
-                    <Style.Triggers>
-                        <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                            <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
-                            <Setter Property="BorderThickness" Value="2"/>
-                            <Setter Property="Effect">
-                                <Setter.Value>
-                                    <DropShadowEffect Color="{StaticResource CopperColor}" BlurRadius="6" ShadowDepth="0" Opacity="0.6"/>
-                                </Setter.Value>
-                            </Setter>
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </Border.Style>
-        </Border>
+        <local:DockTab Note="{Binding Note}"/>
     </DataTemplate>
 
     <!-- Note Row for Library -->
@@ -50,7 +21,7 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <Ellipse Grid.Column="0"
+            <Ellipse Grid.Column="0" Style="{StaticResource LabelDot}"
                      Width="10" Height="10"
                      Margin="0,0,12,0"
                      VerticalAlignment="Center"
@@ -58,7 +29,7 @@
 
             <TextBlock Grid.Column="1"
                        Text="{Binding PreviewText}"
-                       Style="{StaticResource UIText}"
+                       Style="{StaticResource DotLabelText}"
                        FontSize="14"
                        VerticalAlignment="Center"
                        TextTrimming="CharacterEllipsis"/>
@@ -78,14 +49,14 @@
                        Style="{StaticResource SecondaryText}"
                        FontSize="12"
                        FontWeight="SemiBold"
-                       Foreground="{StaticResource SecondaryTextBrush}"/>
+                       Foreground="{DynamicResource SecondaryTextBrush}"/>
             <Separator Style="{StaticResource SectionSeparator}" DockPanel.Dock="Bottom"/>
         </DockPanel>
     </DataTemplate>
 
     <!-- Toast Notification -->
     <DataTemplate x:Key="ToastTemplate">
-        <Border Background="{StaticResource SuccessBrush}"
+        <Border Background="{DynamicResource SuccessBrush}"
                 CornerRadius="8"
                 Padding="16,12"
                 MinWidth="280"

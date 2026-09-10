@@ -9,7 +9,7 @@
         </Grid.ColumnDefinitions>
 
         <TextBlock Grid.Column="0"
-                   Text="{Binding Label}"
+                   Text="{Binding Label, RelativeSource={RelativeSource AncestorType=UserControl}}"
                    Style="{StaticResource UIText}"
                    VerticalAlignment="Center"
                    Width="100"/>
@@ -25,7 +25,6 @@
                      Style="{StaticResource SearchBox}"
                      IsReadOnly="True"
                      Padding="12,8"
-                     Text="{Binding Hotkey.DisplayString, Mode=OneWay}"
                      PreviewKeyDown="HotkeyTextBox_PreviewKeyDown"
                      GotFocus="HotkeyTextBox_GotFocus"
                      LostFocus="HotkeyTextBox_LostFocus"/>
@@ -35,7 +34,6 @@
                     Style="{StaticResource IconButton}"
                     Padding="8,4"
                     Margin="8,0,0,0"
-                    Visibility="{Binding Hotkey.IsEmpty, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=inverse}"
                     Click="ClearButton_Click"/>
         </Grid>
     </Grid>

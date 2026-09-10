@@ -6,6 +6,7 @@
     <UseWPF>true</UseWPF>
     <ApplicationIcon>..\..\assets\icon.ico</ApplicationIcon>
     <OutputType>WinExe</OutputType>
+    <Version>1.0.3</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,7 +21,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Resource Include="Resources\icon.ico" />
     <Resource Include="..\..\assets\icon.ico" Link="assets\icon.ico" />
   </ItemGroup>
 </Project>

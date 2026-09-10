@@ -34,11 +34,12 @@ public partial class HotkeyEditor : UserControl
     public HotkeyEditor()
     {
         InitializeComponent();
+        HotkeyTextBox.Text = Hotkey.ToDisplayString();
     }
 
     private static void OnHotkeyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-        if (d is HotkeyEditor editor)
+        if (d is HotkeyEditor editor && editor.HotkeyTextBox != null)
         {
             editor.HotkeyTextBox.Text = ((HotkeyBinding)e.NewValue).ToDisplayString();
         }
@@ -95,7 +96,7 @@ public partial class HotkeyEditor : UserControl
         }
 
         var newBinding = new HotkeyBinding(modifiers, KeyInterop.VirtualKeyFromKey(key));
-        Hotkey = newBinding;
+        SetCurrentValue(HotkeyProperty, newBinding);
         _isListening = false;
         HotkeyTextBox.Text = newBinding.ToDisplayString();
         HotkeyTextBox.Background = (Brush)FindResource("SurfaceBrush");
@@ -106,6 +107,6 @@ public partial class HotkeyEditor : UserControl
 
     private void ClearButton_Click(object sender, RoutedEventArgs e)
     {
-        Hotkey = HotkeyBinding.Empty;
+        SetCurrentValue(HotkeyProperty, HotkeyBinding.Empty);
     }
 }

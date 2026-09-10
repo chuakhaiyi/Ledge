@@ -1,32 +1,24 @@
-namespace Ledge.App.Windows;
+namespace Ledge.App.Controls;
 
 using System.Windows;
-using System.Windows.Input;
+using System.Windows.Controls;
 using Ledge.Core.Services;
 using Ledge.Core.Models;
 
-public partial class SettingsWindow : Window
+public partial class SettingsPanel : UserControl
 {
     private readonly SettingsStore _settingsStore;
 
-    public SettingsWindow(SettingsStore settingsStore)
+    public SettingsPanel(SettingsStore settingsStore)
     {
         _settingsStore = settingsStore;
-        DataContext = _settingsStore;
         InitializeComponent();
+        DataContext = _settingsStore;
     }
 
-    private void Window_Loaded(object sender, RoutedEventArgs e)
+    private void Panel_Loaded(object sender, RoutedEventArgs e)
     {
         DataPathText.Text = _settingsStore.DataPath;
-    }
-
-    private void Window_KeyDown(object sender, KeyEventArgs e)
-    {
-        if (e.Key == Key.Escape)
-        {
-            Close();
-        }
     }
 
     private void OpenDataFolder_Click(object sender, RoutedEventArgs e)
@@ -54,6 +46,7 @@ public partial class SettingsWindow : Window
         {
             _settingsStore.DockEdge = DockEdge.Right;
             _settingsStore.Theme = AppTheme.System;
+            _settingsStore.ShowDockOnHover = true;
             _settingsStore.StartWithWindows = false;
             _settingsStore.PortableMode = false;
             _settingsStore.NewNoteHotkey = new HotkeyBinding(1 | 2, (int)VirtualKey.N);
@@ -63,8 +56,4 @@ public partial class SettingsWindow : Window
         }
     }
 
-    private void Done_Click(object sender, RoutedEventArgs e)
-    {
-        Close();
-    }
 }

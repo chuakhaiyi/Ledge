@@ -17,6 +17,10 @@ public partial class App : Application
     private ThemeManager? _themeManager;
     private SystemTrayService? _systemTray;
     private bool _isExiting;
+    private Mutex? _instanceMutex;
+    private EventWaitHandle? _showLibraryEvent;
+    private RegisteredWaitHandle? _showLibraryWait;
+    private bool _openLibraryRequested;
 
     public App()
     {
@@ -37,6 +41,31 @@ public partial class App : Application
         var data = await _persistence.LoadAsync();
 
         _settingsStore = new SettingsStore(_persistence, data.Settings);
+        var startupOption = e.Args.FirstOrDefault(a => a.StartsWith("--configure-startup="));
+        if (startupOption != null)
+        {
+            _settingsStore.StartWithWindows = startupOption == "--configure-startup=true";
+            await _settingsStore.SaveAsync();
+            Shutdown();
+            return;
+        }
+
+        _instanceMutex = new Mutex(true, "Local\\Ledge", out var firstInstance);
+        if (!firstInstance)
+        {
+            if (!e.Args.Contains("--background") && EventWaitHandle.TryOpenExisting("Local\\Ledge.ShowLibrary", out var existingEvent))
+            { using (existingEvent) existingEvent.Set(); }
+            // A second launch must not flush its older settings over the running app.
+            _settingsStore = null;
+            Shutdown();
+            return;
+        }
+        _showLibraryEvent = new EventWaitHandle(false, EventResetMode.AutoReset, "Local\\Ledge.ShowLibrary");
+        _showLibraryWait = ThreadPool.RegisterWaitForSingleObject(_showLibraryEvent, (_, _) => Dispatcher.BeginInvoke(new Action(() =>
+        {
+            _openLibraryRequested = true;
+            _windowManager?.ShowLibrary();
+        })), null, Timeout.Infinite, false);
         _noteStore = new NoteStore(_persistence);
         await _noteStore.LoadAsync();
 
@@ -57,6 +86,7 @@ public partial class App : Application
 
         _settingsStore.ApplyStartupSettings();
         _windowManager.ShowDock();
+        if (!e.Args.Contains("--background") || _openLibraryRequested) _windowManager.ShowLibrary();
     }
 
     private void Application_Exit(object sender, ExitEventArgs e)
@@ -64,12 +94,24 @@ public partial class App : Application
         if (_isExiting) return;
         _isExiting = true;
 
-        _systemTray?.Dispose();
-        _hotkeyManager?.Dispose();
-        _themeManager?.Dispose();
-        _noteStore?.ForceSave();
-        _settingsStore?.SaveAsync().Wait();
-        _services.Dispose();
+        try
+        {
+            _noteStore?.ForceSave();
+            _settingsStore?.SaveAsync().GetAwaiter().GetResult();
+        }
+        catch (Exception exception)
+        {
+            MessageBox.Show($"Your latest changes could not be saved.\n\n{exception.Message}",
+                "Ledge — Save failed", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            _showLibraryWait?.Unregister(null);
+            _showLibraryEvent?.Dispose();
+            _instanceMutex?.Dispose();
+            _noteStore?.Dispose();
+            _services.Dispose();
+        }
     }
 
     public static T GetService<T>() where T : notnull

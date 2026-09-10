@@ -8,15 +8,20 @@
         SizeToContent="Manual"
         Loaded="Window_Loaded"
         Closed="Window_Closed"
+        Closing="Window_Closing"
         LocationChanged="Window_LocationChanged"
         SizeChanged="Window_SizeChanged"
         KeyDown="Window_KeyDown"
         SourceInitialized="Window_SourceInitialized">
+    <Grid x:Name="NoteRoot" Margin="12" RenderTransformOrigin="0.5,0.5">
+    <Grid.RenderTransform><TransformGroup><ScaleTransform x:Name="NoteScale"/><TranslateTransform x:Name="NoteSlide"/></TransformGroup></Grid.RenderTransform>
     <local:NoteEditor x:Name="Editor"
                       Note="{Binding Note, RelativeSource={RelativeSource AncestorType=Window}}"
+                      TextChanged="Editor_TextChanged"
                       ColorChanged="Editor_ColorChanged"
                       DeleteRequested="Editor_DeleteRequested"
                       PinToggled="Editor_PinToggled"
                       CloseRequested="Editor_CloseRequested"
                       NewNoteRequested="Editor_NewNoteRequested"/>
+    </Grid>
 </Window>

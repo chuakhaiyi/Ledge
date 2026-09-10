@@ -38,22 +38,30 @@ jobs:
             -p:PublishSingleFile=true `
             -p:IncludeNativeLibrariesForSelfExtract=true `
             -p:EnableCompressionInSingleFile=true `
-            -o artifacts
+            -o artifacts/app
 
       - name: Rename executable
         run: |
-          Move-Item artifacts/Ledge.App.exe artifacts/Ledge.exe -Force
+          Move-Item artifacts/app/Ledge.App.exe artifacts/app/Ledge.exe -Force
 
-      - name: Generate SHA256
+      - name: Build installer
         run: |
-          $hash = Get-FileHash artifacts/Ledge.exe -Algorithm SHA256
-          Set-Content -Path artifacts/Ledge.exe.sha256 -Value $hash.Hash
+          if (!(Test-Path 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe')) {
+            choco install innosetup -y --no-progress
+          }
+          .\build\installer.ps1 -SkipPublish
+          Copy-Item artifacts/app/Ledge.exe artifacts/installer/Ledge.exe
+          (Get-FileHash artifacts/installer/Ledge.exe -Algorithm SHA256).Hash | Set-Content artifacts/installer/Ledge.exe.sha256
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: Ledge
-          path: artifacts/*
+          path: |
+            artifacts/installer/Ledge-Setup.exe
+            artifacts/installer/Ledge-Setup.exe.sha256
+            artifacts/installer/Ledge.exe
+            artifacts/installer/Ledge.exe.sha256
           retention-days: 30
 
   release:
@@ -71,6 +79,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
+            artifacts/Ledge-Setup.exe
+            artifacts/Ledge-Setup.exe.sha256
             artifacts/Ledge.exe
             artifacts/Ledge.exe.sha256
           generate_release_notes: true

@@ -2,12 +2,12 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <!-- Light Mode Colors -->
-    <Color x:Key="InkColor">#1B1D22</Color>
-    <Color x:Key="PaperColor">#EAE6DC</Color>
+    <Color x:Key="InkColor">#24272B</Color>
+    <Color x:Key="PaperColor">#ECEAE5</Color>
     <Color x:Key="CopperColor">#B5642C</Color>
     <Color x:Key="PineColor">#4B5A45</Color>
     <Color x:Key="AshColor">#8A8D91</Color>
-    <Color x:Key="PaperHiColor">#F3F0E8</Color>
+    <Color x:Key="PaperHiColor">#F7F6F3</Color>
 
     <!-- Note Colors -->
     <Color x:Key="ButterColor">#F0DFAE</Color>
@@ -22,15 +22,20 @@
     <SolidColorBrush x:Key="BackgroundBrush" Color="{StaticResource PaperColor}"/>
     <SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource PaperHiColor}"/>
     <SolidColorBrush x:Key="PrimaryTextBrush" Color="{StaticResource InkColor}"/>
-    <SolidColorBrush x:Key="SecondaryTextBrush" Color="{StaticResource AshColor}"/>
+    <SolidColorBrush x:Key="SecondaryTextBrush" Color="#62666C"/>
     <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource CopperColor}"/>
     <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource PineColor}"/>
-    <SolidColorBrush x:Key="BorderBrush" Color="#E8E0D4"/>
+    <SolidColorBrush x:Key="BorderBrush" Color="#CBC5B9"/>
+    <SolidColorBrush x:Key="MenuDividerBrush" Color="#B9B2A6"/>
+    <SolidColorBrush x:Key="DestructiveHoverBrush" Color="#F5DFDC"/>
+    <SolidColorBrush x:Key="DestructiveTextBrush" Color="#9B3430"/>
     <SolidColorBrush x:Key="EdgeRuleBrush" Color="#8A8D91" Opacity="0.35"/>
     <SolidColorBrush x:Key="FocusRingBrush" Color="{StaticResource CopperColor}"/>
     <SolidColorBrush x:Key="DisabledBrush" Color="#8A8D91" Opacity="0.5"/>
     <SolidColorBrush x:Key="AshBrush" Color="{StaticResource AshColor}"/>
-    <SolidColorBrush x:Key="OverlayBrush" Color="#1B1D22" Opacity="0.06"/>
+    <SolidColorBrush x:Key="OverlayBrush" Color="#24272B" Opacity="0.06"/>
     <SolidColorBrush x:Key="ShadowBrush" Color="#000000" Opacity="0.4"/>
     <SolidColorBrush x:Key="MossNoteBrush" Color="{StaticResource MossColor}"/>
+    <SolidColorBrush x:Key="MaterialBrush" Color="#E6F5F4F0"/>
+    <SolidColorBrush x:Key="CardEdgeBrush" Color="#22000000"/>
 </ResourceDictionary>

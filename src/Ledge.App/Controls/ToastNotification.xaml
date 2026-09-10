@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:Ledge.App.Controls">
     <Border x:Name="ToastBorder"
-            Background="{StaticResource SuccessBrush}"
+            Background="{DynamicResource SuccessBrush}"
             CornerRadius="8"
             Padding="16,12"
             MinWidth="280"

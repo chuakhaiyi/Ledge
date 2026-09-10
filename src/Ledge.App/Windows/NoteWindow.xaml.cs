@@ -2,6 +2,9 @@ namespace Ledge.App.Windows;
 
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
+using System.ComponentModel;
 using System.Windows.Interop;
 using System.Runtime.InteropServices;
 using Ledge.Native.Interop;
@@ -14,6 +17,10 @@ public partial class NoteWindow : Window
     private readonly NoteStore _noteStore;
     private readonly SettingsStore _settingsStore;
     private bool _isClosing;
+    private bool _allowClose;
+    private bool _closeStarted;
+    private bool _closed;
+    private HwndSource? _source;
 
     public static readonly DependencyProperty NoteProperty =
         DependencyProperty.Register(nameof(Note), typeof(Note), typeof(NoteWindow),
@@ -33,6 +40,8 @@ public partial class NoteWindow : Window
         _settingsStore = settingsStore;
         Note = note;
         InitializeComponent();
+        NoteRoot.ContextMenu = Ledge.App.Controls.AppMenus.NoteActions(Editor_DeleteRequested);
+        _noteStore.PropertyChanged += OnNotesChanged;
 
         if (note.Position != null)
         {
@@ -65,17 +74,39 @@ public partial class NoteWindow : Window
         }
     }
 
+    private void OnNotesChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(NoteStore.Notes) || Note == null) return;
+        var current = _noteStore.Notes.FirstOrDefault(n => n.Id == Note.Id);
+        if (current != null) Note = current;
+    }
+
+    private void Editor_TextChanged(string text)
+    {
+        if (Note != null) _noteStore.SetText(Note, text);
+    }
+
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
         var hwnd = new WindowInteropHelper(this).Handle;
         SetWindowStyle(hwnd);
         FocusEditor();
+        if (SystemParameters.ClientAreaAnimation)
+        {
+            NoteScale.ScaleX = NoteScale.ScaleY = .94;
+            NoteSlide.Y = 10;
+            SpringMotion.To(NoteScale, ScaleTransform.ScaleXProperty, 1);
+            SpringMotion.To(NoteScale, ScaleTransform.ScaleYProperty, 1);
+            SpringMotion.To(NoteSlide, TranslateTransform.YProperty, 0);
+            NoteRoot.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(180)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+        }
     }
 
     private void Window_SourceInitialized(object sender, EventArgs e)
     {
         var hwnd = new WindowInteropHelper(this).Handle;
-        HwndSource.FromHwnd(hwnd)?.AddHook(WndProc);
+        _source = HwndSource.FromHwnd(hwnd);
+        _source?.AddHook(WndProc);
     }
 
     private nint WndProc(nint hwnd, int msg, nint wParam, nint lParam, ref bool handled)
@@ -87,7 +118,7 @@ public partial class NoteWindow : Window
             var pt = new Point(x, y);
             pt = PointFromScreen(pt);
 
-            var border = 6;
+            var border = 18;
             var left = pt.X <= border;
             var right = pt.X >= ActualWidth - border;
             var top = pt.Y <= border;
@@ -101,7 +132,7 @@ public partial class NoteWindow : Window
             if (right) { handled = true; return (nint)User32.HTRIGHT; }
             if (top) { handled = true; return (nint)User32.HTTOP; }
             if (bottom) { handled = true; return (nint)User32.HTBOTTOM; }
-            if (pt.Y <= 30)
+            if (pt.Y <= 56)
             {
                 var hit = InputHitTest(pt) as DependencyObject;
                 if (IsInteractiveControl(hit))
@@ -160,8 +191,32 @@ public partial class NoteWindow : Window
         }
     }
 
+    private async void Window_Closing(object? sender, CancelEventArgs e)
+    {
+        if (_allowClose || !IsLoaded || !SystemParameters.ClientAreaAnimation) return;
+        e.Cancel = true;
+        if (_closeStarted) return;
+        _closeStarted = true;
+        Editor.ClosePalette();
+        SpringMotion.To(NoteScale, ScaleTransform.ScaleXProperty, .94);
+        SpringMotion.To(NoteScale, ScaleTransform.ScaleYProperty, .94);
+        SpringMotion.To(NoteSlide, TranslateTransform.YProperty, 10);
+        NoteRoot.BeginAnimation(OpacityProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(160)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn } });
+        await Task.Delay(170);
+        if (_closed) return;
+        _allowClose = true;
+        Close();
+    }
+
     private void Window_Closed(object sender, EventArgs e)
     {
+        _closed = true;
+        SpringMotion.Stop(NoteScale);
+        SpringMotion.Stop(NoteSlide);
+        Editor.ClosePalette();
+        _noteStore.PropertyChanged -= OnNotesChanged;
+        _source?.RemoveHook(WndProc);
+        _source = null;
         if (!_isClosing && Note != null)
         {
             _noteStore.SetPosition(Note, new NotePosition(Left, Top, Width, Height));
@@ -170,7 +225,7 @@ public partial class NoteWindow : Window
 
     private void Window_LocationChanged(object sender, EventArgs e)
     {
-        if (Note != null)
+        if (IsLoaded && Note != null)
         {
             _noteStore.SetPosition(Note, new NotePosition(Left, Top, Width, Height));
         }
@@ -178,7 +233,7 @@ public partial class NoteWindow : Window
 
     private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
     {
-        if (Note != null)
+        if (IsLoaded && Note != null)
         {
             _noteStore.SetPosition(Note, new NotePosition(Left, Top, Width, Height));
         }
@@ -189,7 +244,6 @@ public partial class NoteWindow : Window
         if (Note != null)
         {
             _noteStore.SetColor(Note, color);
-            Note = Note with { Color = color };
         }
     }
 
@@ -199,7 +253,6 @@ public partial class NoteWindow : Window
         {
             var nextColor = Note.Color.Next();
             _noteStore.SetColor(Note, nextColor);
-            Note = Note with { Color = nextColor };
         }
     }
 
@@ -209,7 +262,7 @@ public partial class NoteWindow : Window
     {
         _isClosing = true;
         DeleteRequested?.Invoke();
-        Close();
+        if (!_closed) Close();
     }
 }
 

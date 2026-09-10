@@ -1,6 +1,7 @@
 namespace Ledge.App.Windows;
 
 using System.Windows;
+using System.Windows.Threading;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
@@ -17,12 +18,14 @@ public partial class LibraryWindow : Window
     private readonly NoteStore _noteStore;
     private readonly SettingsStore _settingsStore;
     private readonly ObservableCollection<NoteRow> _allRows = [];
+    private readonly List<ListView> _sectionLists = [];
     private ICollectionView? _pinnedView;
     private ICollectionView? _notesView;
     private ICollectionView? _archivedView;
     private string _currentSearch = "";
     private NoteSortMode _sortMode = NoteSortMode.ModifiedDesc;
     private bool _showArchived = false;
+    private readonly DispatcherTimer _previewTimer = new() { Interval = TimeSpan.FromMilliseconds(350) };
 
     public NoteSortMode SortMode
     {
@@ -42,30 +45,73 @@ public partial class LibraryWindow : Window
         _noteStore = noteStore;
         _settingsStore = settingsStore;
         InitializeComponent();
+        SettingsHost.Content = new Ledge.App.Controls.SettingsPanel(settingsStore);
 
-        _noteStore.PropertyChanged += (_, e) =>
+        _noteStore.PropertyChanged += OnNotesChanged;
+        _previewTimer.Tick += (_, _) => { _previewTimer.Stop(); RefreshList(); };
+        Closed += (_, _) => { _previewTimer.Stop(); _noteStore.PropertyChanged -= OnNotesChanged; };
+    }
+
+    private void OnNotesChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(NoteStore.Notes)) return;
+        Dispatcher.Invoke(() =>
         {
-            if (e.PropertyName is nameof(NoteStore.Notes)
-                or nameof(NoteStore.VisibleNotes)
-                or nameof(NoteStore.PinnedNotes)
-                or nameof(NoteStore.ArchivedNotes))
-            {
-                RefreshList();
-            }
-        };
+            var notes = _noteStore.Notes;
+            var immediate = notes.Count != _allRows.Count || notes.Any(n => !_allRows.Any(r => r.Note.Id == n.Id && r.Note.Color == n.Color && r.Note.Pinned == n.Pinned && r.Note.Archived == n.Archived));
+            if (immediate) { _previewTimer.Stop(); RefreshList(); }
+            else if (notes.Any(n => _allRows.Any(r => r.Note.Id == n.Id && r.Note.Text != n.Text)))
+            { _previewTimer.Stop(); _previewTimer.Start(); }
+        });
     }
 
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
         // Populate sort mode combo box
-        SortComboBox.ItemsSource = Enum.GetValues(typeof(NoteSortMode));
+        SortComboBox.ItemsSource = new[]
+        {
+            new { Value = NoteSortMode.ModifiedDesc, Label = "Last edited" },
+            new { Value = NoteSortMode.CreatedDesc, Label = "Newest first" },
+            new { Value = NoteSortMode.Color, Label = "Color" },
+            new { Value = NoteSortMode.Alphabetical, Label = "A to Z" }
+        };
+        SortComboBox.DisplayMemberPath = "Label";
+        SortComboBox.SelectedValuePath = "Value";
+        SortComboBox.SelectedValue = _sortMode;
         
         RefreshList();
+        if (LibraryContent.IsVisible) SearchBox.FocusSearch();
+    }
+
+    public void ShowSettings()
+    {
+        LibraryContent.Visibility = Visibility.Collapsed;
+        SettingsHost.Visibility = Visibility.Visible;
+        SettingsNavigation.IsChecked = true;
+        SettingsNavigation.Focus();
+    }
+
+    public void ShowNotes()
+    {
+        SettingsHost.Visibility = Visibility.Collapsed;
+        LibraryContent.Visibility = Visibility.Visible;
+        NotesNavigation.IsChecked = true;
         SearchBox.FocusSearch();
     }
 
+    private void NotesNavigation_Click(object sender, RoutedEventArgs e) => ShowNotes();
+    private void SettingsNavigation_Click(object sender, RoutedEventArgs e) => ShowSettings();
+
     private void RefreshList()
     {
+        var notes = _noteStore.Notes;
+        var sameSections = notes.Count == _allRows.Count && notes.All(n => _allRows.Any(r => r.Note.Id == n.Id && r.Note.Pinned == n.Pinned && r.Note.Archived == n.Archived));
+        if (sameSections && _notesView != null && string.IsNullOrEmpty(_currentSearch))
+        {
+            foreach (var row in _allRows) row.Update(notes.Single(n => n.Id == row.Note.Id));
+            _pinnedView?.Refresh(); _notesView.Refresh(); _archivedView?.Refresh();
+            return;
+        }
         _allRows.Clear();
 
         foreach (var note in _noteStore.Notes)
@@ -98,23 +144,33 @@ public partial class LibraryWindow : Window
         switch (_sortMode)
         {
             case NoteSortMode.ModifiedDesc:
-                view.SortDescriptions.Add(new SortDescription(nameof(NoteRow.Note.ModifiedAt), ListSortDirection.Descending));
+                view.SortDescriptions.Add(new SortDescription("Note.ModifiedAt", ListSortDirection.Descending));
                 break;
             case NoteSortMode.CreatedDesc:
-                view.SortDescriptions.Add(new SortDescription(nameof(NoteRow.Note.CreatedAt), ListSortDirection.Descending));
+                view.SortDescriptions.Add(new SortDescription("Note.CreatedAt", ListSortDirection.Descending));
                 break;
             case NoteSortMode.Color:
-                view.SortDescriptions.Add(new SortDescription(nameof(NoteRow.Note.Color), ListSortDirection.Ascending));
+                view.SortDescriptions.Add(new SortDescription("Note.Color", ListSortDirection.Ascending));
                 break;
             case NoteSortMode.Alphabetical:
-                view.SortDescriptions.Add(new SortDescription(nameof(NoteRow.Note.Text), ListSortDirection.Ascending));
+                view.SortDescriptions.Add(new SortDescription("Note.Text", ListSortDirection.Ascending));
                 break;
         }
     }
 
     private void BuildUI()
     {
+        _sectionLists.Clear();
         NotesPanel.Children.Clear();
+        if (_allRows.Count == 0 || !_allRows.Any(r => r.Note.Text.ToLowerInvariant().Contains(_currentSearch)))
+        {
+            NotesPanel.Children.Add(new TextBlock
+            {
+                Text = _allRows.Count == 0 ? "No notes yet. Create a note to get started." : "No notes match your search.",
+                Style = (Style)FindResource("SecondaryText"),
+                Margin = new Thickness(0, 24, 0, 0)
+            });
+        }
 
         if (_pinnedView is not null && _pinnedView.Cast<NoteRow>().Any())
         {
@@ -145,7 +201,7 @@ public partial class LibraryWindow : Window
                 Style = (Style)FindResource("SectionHeaderStyle"),
                 FontSize = 12,
                 FontWeight = FontWeights.SemiBold,
-                Foreground = (Brush)FindResource("SecondaryTextBrush")
+                TextWrapping = TextWrapping.Wrap
             },
             IsExpanded = !isCollapsed,
             Margin = new Thickness(0, 0, 0, 22)
@@ -155,10 +211,32 @@ public partial class LibraryWindow : Window
         {
             Style = (Style)FindResource("NotesListStyle"),
             ItemsSource = view,
+            MaxHeight = 360,
             ItemTemplate = (DataTemplate)FindResource("NoteRowTemplate"),
             BorderThickness = new Thickness(0)
         };
+        _sectionLists.Add(listView);
+        listView.SelectionMode = SelectionMode.Single;
+        listView.SelectionChanged += (_, e) =>
+        {
+            if (e.AddedItems.Count == 0) return;
+            foreach (var other in _sectionLists.Where(other => other != listView)) other.SelectedItem = null;
+        };
+        listView.PreviewMouseRightButtonDown += (_, e) =>
+        {
+            if (e.OriginalSource is DependencyObject source && ItemsControl.ContainerFromElement(listView, source) is ListViewItem item)
+            {
+                item.IsSelected = true;
+                item.Focus();
+            }
+        };
+        // ContextMenuService must find a menu before its first opening event.
+        listView.ContextMenu = new ContextMenu();
 
+        listView.KeyDown += (_, e) =>
+        {
+            if (e.Key == Key.Enter && listView.SelectedItem is NoteRow row) OpenNote(row.Note);
+        };
         listView.MouseDoubleClick += (_, e) =>
         {
             if (listView.SelectedItem is NoteRow row)
@@ -169,18 +247,15 @@ public partial class LibraryWindow : Window
 
         listView.ContextMenuOpening += (_, e) =>
         {
-            if (listView.SelectedItem is not NoteRow row) return;
-            listView.ContextMenu = new ContextMenu
+            if (listView.SelectedItem is not NoteRow row) { e.Handled = true; return; }
+            listView.ContextMenu.ItemsSource = new object[]
             {
-                ItemsSource = new object[]
-                {
-                    new MenuItem { Header = row.Note.Pinned ? "Unpin" : "Pin", Command = new RelayCommand(() => TogglePin(listView)) },
-                    new MenuItem { Header = row.Note.Archived ? "Restore" : "Archive", Command = new RelayCommand(() => ToggleArchive(listView)) },
-                    new MenuItem { Header = "Delete", Command = new RelayCommand(() => DeleteNote(listView)) },
-                    new Separator(),
-                    new MenuItem { Header = "Copy Text", Command = new RelayCommand(() => CopyText(listView)) },
-                    new MenuItem { Header = "Export…", Command = new RelayCommand(() => ExportNote(row)) }
-                }
+                new MenuItem { Header = row.Note.Pinned ? "Unpin" : "Pin", Command = new RelayCommand(() => TogglePin(listView)) },
+                new MenuItem { Header = row.Note.Archived ? "Restore" : "Archive", Command = new RelayCommand(() => ToggleArchive(listView)) },
+                new MenuItem { Header = "Export…", Command = new RelayCommand(() => ExportNote(row)) },
+                new MenuItem { Header = "Copy text", Command = new RelayCommand(() => CopyText(listView)) },
+                new Separator(),
+                new MenuItem { Header = "Delete", Tag = "Destructive", Command = new RelayCommand(() => DeleteNote(listView)) }
             };
         };
 
@@ -220,7 +295,8 @@ public partial class LibraryWindow : Window
     {
         if (listView.SelectedItem is NoteRow row)
         {
-            _noteStore.Update(row.Note with { Pinned = !row.Note.Pinned });
+            var current = _noteStore.Notes.Single(n => n.Id == row.Note.Id);
+            _noteStore.Update(current with { Pinned = !current.Pinned });
         }
     }
 
@@ -230,11 +306,11 @@ public partial class LibraryWindow : Window
         {
             if (row.Note.Archived)
             {
-                _noteStore.Unarchive(row.Note);
+                _noteStore.Unarchive(_noteStore.Notes.Single(n => n.Id == row.Note.Id));
             }
             else
             {
-                _noteStore.Archive(row.Note);
+                _noteStore.Archive(_noteStore.Notes.Single(n => n.Id == row.Note.Id));
             }
         }
     }
@@ -251,13 +327,13 @@ public partial class LibraryWindow : Window
     {
         if (listView.SelectedItem is NoteRow row)
         {
-            Clipboard.SetText(row.Note.Text);
+            Clipboard.SetText(_noteStore.Notes.Single(n => n.Id == row.Note.Id).Text);
         }
     }
 
     private void SortComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
 {
-    if (e.AddedItems.Count > 0 && e.AddedItems[0] is NoteSortMode mode)
+    if (SortComboBox.SelectedValue is NoteSortMode mode)
     {
         _sortMode = mode;
         RefreshFilters();
@@ -266,7 +342,7 @@ public partial class LibraryWindow : Window
 
 private void ExportNote(NoteRow row)
     {
-        var note = row.Note;
+        var note = _noteStore.Notes.Single(n => n.Id == row.Note.Id);
         var dialog = new Microsoft.Win32.SaveFileDialog
         {
             Filter = "Text files (*.txt)|*.txt|JSON files (*.json)|*.json",
@@ -298,11 +374,13 @@ private void ExportNote(NoteRow row)
     private static string GetSafeFileName(string name)
     {
         var invalid = Path.GetInvalidFileNameChars();
-        return string.Concat(name.Where(c => !invalid.Contains(c))).Trim().Substring(0, Math.Min(50, name.Length));
+        var safe = string.Concat(name.Where(c => !invalid.Contains(c))).Trim();
+        return string.IsNullOrEmpty(safe) ? "Note" : safe[..Math.Min(50, safe.Length)];
     }
 
     public void ShowArchive()
     {
+        ShowNotes();
         _showArchived = true;
         RefreshList();
     }
@@ -333,14 +411,27 @@ public sealed class NoteRow : INotifyPropertyChanged
 {
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    public Note Note { get; }
-    public string PreviewText => Note.Text.Split('\n')[0];
+    public Note Note { get; private set; }
+    public string PreviewText => Note.Text.Split('\n')[0].TrimEnd('\r');
     public string MetaText => $"{Note.Color} · {GetRelativeTime(Note.ModifiedAt)}";
     public string ColorBrush => Note.Color.ToHex();
 
     public NoteRow(Note note)
     {
         Note = note;
+    }
+
+    public void Update(Note note)
+    {
+        var old = Note;
+        if (old == note) return;
+        var preview = PreviewText;
+        var meta = MetaText;
+        Note = note;
+        if (old.Text != note.Text || old.Color != note.Color || old.Pinned != note.Pinned || old.Archived != note.Archived) OnPropertyChanged(nameof(Note));
+        if (preview != PreviewText) OnPropertyChanged(nameof(PreviewText));
+        if (meta != MetaText) OnPropertyChanged(nameof(MetaText));
+        if (old.Color != note.Color) OnPropertyChanged(nameof(ColorBrush));
     }
 
     private static string GetRelativeTime(DateTime dt)

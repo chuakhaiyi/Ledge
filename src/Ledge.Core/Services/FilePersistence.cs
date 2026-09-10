@@ -9,12 +9,14 @@ public sealed class FilePersistence
     private readonly string _settingsPath;
     private readonly string _backupPath;
     private readonly JsonSerializerOptions _jsonOptions;
+    private readonly SemaphoreSlim _notesWriteLock = new(1, 1);
+    private readonly SemaphoreSlim _settingsWriteLock = new(1, 1);
 
-    public FilePersistence(Settings settings)
+    public FilePersistence(Settings settings, string? dataDirectory = null)
     {
-        var baseDir = settings.PortableMode
+        var baseDir = dataDirectory ?? (settings.PortableMode
             ? AppContext.BaseDirectory
-            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Ledge");
+            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Ledge"));
 
         Directory.CreateDirectory(baseDir);
 
@@ -74,7 +76,31 @@ public sealed class FilePersistence
             catch { }
         }
 
-        return new StoreData { Notes = notes, Settings = settings };
+        return new StoreData { Notes = NormalizeNoteIds(notes), Settings = settings };
+    }
+
+    private static List<Note> NormalizeNoteIds(IEnumerable<Note> notes)
+    {
+        var usedIds = new HashSet<string>(StringComparer.Ordinal);
+        var normalized = new List<Note>();
+
+        foreach (var note in notes)
+        {
+            var id = note.Id;
+            if (string.IsNullOrWhiteSpace(id) || !usedIds.Add(id))
+            {
+                do id = Guid.NewGuid().ToString("N");
+                while (!usedIds.Add(id));
+
+                normalized.Add(note with { Id = id });
+            }
+            else
+            {
+                normalized.Add(note);
+            }
+        }
+
+        return normalized;
     }
 
     public async Task SaveAsync(IEnumerable<Note> notes)
@@ -88,22 +114,36 @@ public sealed class FilePersistence
         var json = JsonSerializer.Serialize(data, _jsonOptions);
         var tempPath = _storePath + ".tmp";
 
-        await File.WriteAllTextAsync(tempPath, json);
-
-        if (File.Exists(_storePath))
+        await _notesWriteLock.WaitAsync().ConfigureAwait(false);
+        try
         {
-            File.Copy(_storePath, _backupPath, true);
+            await File.WriteAllTextAsync(tempPath, json).ConfigureAwait(false);
+            if (File.Exists(_storePath))
+            {
+                File.Copy(_storePath, _backupPath, true);
+            }
+            File.Move(tempPath, _storePath, true);
         }
-
-        File.Move(tempPath, _storePath, true);
+        finally
+        {
+            _notesWriteLock.Release();
+        }
     }
 
     public async Task SaveSettingsAsync(Settings settings)
     {
         var json = JsonSerializer.Serialize(settings, _jsonOptions);
         var tempPath = _settingsPath + ".tmp";
-        await File.WriteAllTextAsync(tempPath, json);
-        File.Move(tempPath, _settingsPath, true);
+        await _settingsWriteLock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            await File.WriteAllTextAsync(tempPath, json).ConfigureAwait(false);
+            File.Move(tempPath, _settingsPath, true);
+        }
+        finally
+        {
+            _settingsWriteLock.Release();
+        }
     }
 
     public string GetStorePath() => _storePath;

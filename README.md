@@ -9,11 +9,11 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/yourusername/ledge/releases/latest/download/Ledge.exe">
+  <a href="https://github.com/chuakhaiyi/Ledge/releases/latest/download/Ledge-Setup.exe">
     <img src="https://img.shields.io/badge/Download-Latest%20Release-blue?style=for-the-badge" alt="Download"/>
   </a>
-  <a href="https://github.com/yourusername/ledge/releases">
-    <img src="https://img.shields.io/github/v/release/yourusername/ledge?style=for-the-badge" alt="Latest Release"/>
+  <a href="https://github.com/chuakhaiyi/Ledge/releases">
+    <img src="https://img.shields.io/github/v/release/chuakhaiyi/Ledge?style=for-the-badge" alt="Latest Release"/>
   </a>
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="MIT License"/>
@@ -40,14 +40,14 @@
 | **Zero Network** | No accounts, no cloud, no telemetry, no update checks. Your notes never leave your PC. |
 | **Portable Mode** | Store data next to the `.exe` — carry it on a USB stick. |
 | **Fullscreen Aware** | Dock auto-hides during games/fullscreen apps, reappears when you return. |
-| **Single File** | One `.exe` (~72 MB), no installer, no .NET runtime required. |
+| **Windows Installer** | Per-user installation, Start Menu shortcut, optional startup, and uninstall. No .NET runtime required. |
 
 ---
 
 ## Quick Start
 
-1. **Download** the latest `Ledge.exe` from [Releases](https://github.com/yourusername/ledge/releases/latest)
-2. **Run it** — Windows SmartScreen may warn "Unknown publisher" (this is normal for unsigned apps). Click "More info" → "Run anyway".
+1. **Download and run** `Ledge-Setup.exe` from [Releases](https://github.com/chuakhaiyi/Ledge/releases/latest).
+2. **Install** for your Windows account, then open Ledge from the Start Menu. Optional startup and desktop shortcuts are offered during setup. The installer is currently unsigned.
 3. **Use it**:
    - `Ctrl+Alt+N` → New note
    - `Ctrl+Alt+A` → Open library (all notes)
@@ -76,9 +76,11 @@
 
 ## Settings
 
+Double-click the tray icon to open All Notes. Settings shares this window; individual notes remain separate floating windows. Uninstalling Ledge retains notes and settings in `%APPDATA%\Ledge`.
+
 | Tab | Options |
 |-----|---------|
-| **General** | Start with Windows, Portable mode, Dock edge (Left/Right) |
+| **General** | Start with Windows, Portable mode, Dock edge (Left/Right/Top) |
 | **Appearance** | Theme (System/Light/Dark), Show dock only on hover |
 | **Hotkeys** | Rebind all 4 hotkeys (shows "Taken" if conflict) |
 | **Advanced** | Open data folder, Reset to defaults |
@@ -107,23 +109,23 @@
 
 ### Build
 ```powershell
-git clone https://github.com/yourusername/ledge.git
+git clone https://github.com/chuakhaiyi/Ledge.git
 cd ledge
 dotnet build Ledge.sln --configuration Release
 ```
 
-### Publish (single-file .exe)
+### Build the installer
+Install Inno Setup 6, then run:
 ```powershell
-dotnet publish src/Ledge.App/Ledge.App.csproj `
-  -c Release `
-  -r win-x64 `
-  --self-contained true `
-  -p:PublishSingleFile=true `
-  -p:IncludeNativeLibrariesForSelfExtract=true `
-  -p:EnableCompressionInSingleFile=true `
-  -o artifacts
+.\build\installer.ps1
 ```
-Output: `artifacts/Ledge.exe` (~72 MB)
+Output: `artifacts/installer/Ledge-Setup.exe` and its SHA256 checksum. The installer installs to `%LOCALAPPDATA%\Ledge` without administrator rights.
+
+### Publish only (development / portable use)
+```powershell
+.\build\publish.ps1 -OutputDir artifacts/app
+```
+Output: `artifacts/app/Ledge.exe` (~72 MB)
 
 ---
 
@@ -137,7 +139,9 @@ Ledge/
 │   └── Ledge.Native/     # Win32 P/Invoke (hotkeys, window styles)
 ├── tests/
 ├── build/
-│   └── publish.ps1       # Build script
+│   ├── publish.ps1       # Portable build script
+│   ├── installer.ps1     # Installer build script
+│   └── Ledge.iss         # Inno Setup definition
 ├── assets/
 │   └── icon.ico
 ├── .github/workflows/    # CI/CD

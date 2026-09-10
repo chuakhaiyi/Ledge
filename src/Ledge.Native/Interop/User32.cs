@@ -157,6 +157,9 @@ public static class User32
     [DllImport("user32.dll", SetLastError = true)]
     public static extern nint GetForegroundWindow();
 
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+    public static extern nint GetModuleHandle(string? lpModuleName);
+
     [DllImport("user32.dll", SetLastError = true)]
     public static extern bool GetCursorPos(out POINT lpPoint);
 

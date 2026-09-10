@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using Ledge.Core.Models;
+using Ledge.App.Services;
 
 public partial class NoteEditor : UserControl
 {
@@ -18,6 +19,7 @@ public partial class NoteEditor : UserControl
         set => SetValue(NoteProperty, value);
     }
 
+    public event Action<string>? TextChanged;
     public event Action<NoteColor>? ColorChanged;
     public event Action? DeleteRequested;
     public event Action? PinToggled;
@@ -41,7 +43,14 @@ public partial class NoteEditor : UserControl
         ];
 
         InitializeComponent();
+        TextBox.ContextMenu = AppMenus.TextEditing(TextBox);
         Loaded += OnLoaded;
+        PreviewKeyDown += (_, e) =>
+        {
+            if (e.Key != Key.Escape || !ColorPopup.IsOpen) return;
+            ClosePalette();
+            e.Handled = true;
+        };
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
@@ -54,10 +63,14 @@ public partial class NoteEditor : UserControl
     {
         if (d is NoteEditor editor && e.NewValue is Note note)
         {
-            editor.TextBox.Text = note.Text;
-            editor.UpdateColorIndicator(note.Color);
-            editor.UpdateColorSelection(note.Color);
-            editor.UpdatePinIndicator(note.Pinned);
+            if (editor.TextBox == null) return;
+            if (editor.TextBox.Text != note.Text) editor.TextBox.Text = note.Text;
+            if (e.OldValue is not Note old || old.Color != note.Color)
+            {
+                editor.UpdateColorIndicator(note.Color);
+                editor.UpdateColorSelection(note.Color);
+            }
+            if (e.OldValue is not Note previous || previous.Pinned != note.Pinned) editor.UpdatePinIndicator(note.Pinned);
         }
     }
 
@@ -65,19 +78,34 @@ public partial class NoteEditor : UserControl
     {
         if (Note != null)
         {
-            Note.Text = TextBox.Text;
+            if (Note.Text != TextBox.Text) TextChanged?.Invoke(TextBox.Text);
         }
     }
 
     private void ColorButton_Click(object sender, RoutedEventArgs e)
     {
-        ColorPopup.ItemsSource = _colorChips;
+        ColorChoices.ItemsSource = _colorChips;
         ColorPopup.IsOpen = !ColorPopup.IsOpen;
+    }
+
+    private void ColorPopup_Opened(object? sender, EventArgs e)
+    {
+        PaletteSlide.Y = 8;
+        SpringMotion.To(PaletteSlide, TranslateTransform.YProperty, 0);
+        ColorChoices.UpdateLayout();
+        if (ColorChoices.ItemContainerGenerator.ContainerFromIndex(0) is ContentPresenter first)
+            first.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
+    }
+
+    private void ColorPopup_Closed(object? sender, EventArgs e)
+    {
+        SpringMotion.Stop(PaletteSlide);
+        ColorButton.Focus();
     }
 
     private void ColorChip_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is Border border && border.DataContext is ColorChip chip)
+        if (sender is Button button && button.DataContext is ColorChip chip)
         {
             ColorChanged?.Invoke(chip.Color);
             ColorPopup.IsOpen = false;
@@ -106,6 +134,7 @@ public partial class NoteEditor : UserControl
 
     public void UpdateColorIndicator(NoteColor color)
     {
+        NoteSurface.Background = ContinuousSurface.NoteFill(color);
         ColorIndicator.Fill = new SolidColorBrush((Color)ColorConverter.ConvertFromString(color.ToHex()));
         var foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString(color.ToForegroundHex()));
         TextBox.Foreground = foreground;
@@ -127,6 +156,8 @@ public partial class NoteEditor : UserControl
         PinIcon.Fill = pinned ? (Brush)FindResource("AccentBrush") : Brushes.Transparent;
         PinButton.ToolTip = pinned ? "Unpin note from dock" : "Pin note to dock";
     }
+
+    public void ClosePalette() => ColorPopup.IsOpen = false;
 
     public void FocusEditor()
     {

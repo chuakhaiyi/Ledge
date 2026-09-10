@@ -5,7 +5,9 @@
         Style="{StaticResource BorderlessWindow}"
         Loaded="Window_Loaded"
         KeyDown="Window_KeyDown"
-        Focusable="False"
+        Title="Ledge — Dock"
+        ShowActivated="False"
+        Focusable="True"
         MouseEnter="Window_MouseEnter"
         MouseLeave="Window_MouseLeave"
         MouseLeftButtonDown="Window_MouseLeftButtonDown"
@@ -14,14 +16,20 @@
     <Window.Resources>
         <local:NoteToDockTabConverter x:Key="NoteToTabConverter"/>
     </Window.Resources>
-
     <Grid x:Name="RootGrid">
         <!-- Collapsed edge view -->
         <Border x:Name="CollapsedView"
-                Background="Transparent"
-                Cursor="Hand"
-                ToolTip="Ledge — hover or click to open">
+                Cursor="Hand">
+            <Border.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="Open dock" Click="ExpandDock_Click"/>
+                    <MenuItem Header="New note" Click="NewNote_Click"/>
+                    <MenuItem Header="All notes" Click="OpenLibrary_Click"/>
+                    <MenuItem Header="Settings" Click="OpenSettings_Click"/>
+                </ContextMenu>
+            </Border.ContextMenu>
             <Grid x:Name="CollapsedGrid" ClipToBounds="False">
+                <Border x:Name="HoverZone" Background="#01000000" HorizontalAlignment="Left" VerticalAlignment="Top" Visibility="Collapsed"/>
                 <ItemsControl x:Name="CollapsedTabs"
                           AlternationCount="8"
                           ItemsSource="{Binding CollapsedNotes, RelativeSource={RelativeSource AncestorType=Window}}"
@@ -34,55 +42,51 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <local:DockTab Note="{Binding}"
-                                           Index="{Binding RelativeSource={RelativeSource AncestorType=ContentPresenter}, Path=(ItemsControl.AlternationIndex)}"
+                            <local:DockTab Note="{Binding Note}"
                                            Edge="{Binding CurrentDockEdge, RelativeSource={RelativeSource AncestorType=Window}}"
                                            PeekOnly="True"
                                            IsPeeked="{Binding IsPeeking, RelativeSource={RelativeSource AncestorType=Window}}"/>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
-
                 <Border x:Name="CollapsedEmptyMark"
                         Width="8"
                         Height="52"
-                        Background="{StaticResource AccentBrush}"
+                        Background="{DynamicResource AccentBrush}"
                         CornerRadius="4"
                         HorizontalAlignment="Right"
                         VerticalAlignment="Center"
                         Visibility="Collapsed"/>
             </Grid>
         </Border>
-
         <!-- Expanded dock view -->
-        <Border x:Name="ExpandedView"
-                Background="{StaticResource BackgroundBrush}"
-                BorderBrush="{StaticResource BorderBrush}"
+        <local:ContinuousSurface x:Name="ExpandedView" CornerRadius="22" Elevation="8" Margin="10" VerticalAlignment="Center"
+                Background="{DynamicResource MaterialBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="1"
                 Visibility="Collapsed">
+            <local:ContinuousSurface.RenderTransform><TranslateTransform x:Name="PanelSlide"/></local:ContinuousSurface.RenderTransform>
             <Grid x:Name="ExpandedGrid">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
-
                 <!-- Header -->
                 <Border Grid.Row="0"
-                        Background="{StaticResource OverlayBrush}"
-                        BorderBrush="{StaticResource BorderBrush}"
+                        Background="Transparent"
+                        BorderBrush="{DynamicResource BorderBrush}"
                         BorderThickness="0,0,0,1"
-                        Padding="12,8">
+                        Padding="14,12">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                             <TextBlock Text="Ledge"
                                        Style="{StaticResource DisplayText}"
-                                       FontSize="16"
+                                       FontSize="22"
                                        FontWeight="SemiBold"
                                        VerticalAlignment="Center"/>
                             <TextBlock x:Name="NoteCountText"
@@ -90,7 +94,6 @@
                                        Margin="8,0,0,0"
                                        VerticalAlignment="Center"/>
                         </StackPanel>
-
                         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                             <!-- New Note button -->
                             <Button Style="{StaticResource PrimaryButton}"
@@ -100,28 +103,25 @@
                                     Margin="0,0,6,0"
                                     Click="NewNote_Click"
                                     ToolTip="New note (Ctrl+Alt+N)"/>
-
                             <!-- Library button -->
                             <Button Style="{StaticResource IconButton}"
                                     Click="OpenLibrary_Click"
                                     ToolTip="All notes (Ctrl+Alt+A)">
                                 <Path Data="M1,2 L11,2 M1,6 L11,6 M1,10 L8,10"
-                                      Stroke="{StaticResource SecondaryTextBrush}"
+                                      Stroke="{DynamicResource SecondaryTextBrush}"
                                       StrokeThickness="1.5" Width="12" Height="12"/>
                             </Button>
-
                             <!-- Settings button -->
                             <Button Style="{StaticResource IconButton}"
                                     Click="OpenSettings_Click"
                                     ToolTip="Settings">
                                 <Path Data="M5,1 L7,1 L7.3,2.5 L8.5,3 L9.8,2.2 L11.2,3.6 L10.4,4.9 L10.9,6.1 L12.4,6.4 L12.4,8.4 L10.9,8.7 L10.4,9.9 L11.2,11.2 L9.8,12.6 L8.5,11.8 L7.3,12.3 L7,13.8 L5,13.8 L4.7,12.3 L3.5,11.8 L2.2,12.6 L0.8,11.2 L1.6,9.9 L1.1,8.7 L-0.4,8.4 L-0.4,6.4 L1.1,6.1 L1.6,4.9 L0.8,3.6 L2.2,2.2 L3.5,3 L4.7,2.5 Z"
-                                      Stroke="{StaticResource SecondaryTextBrush}"
+                                      Stroke="{DynamicResource SecondaryTextBrush}"
                                       StrokeThickness="1.2" Width="12" Height="13"/>
                             </Button>
                         </StackPanel>
                     </Grid>
                 </Border>
-
                 <!-- Content Area: Notes or Empty State -->
                 <Grid Grid.Row="1">
                     <!-- Empty state -->
@@ -147,41 +147,36 @@
                                     Click="NewNote_Click"/>
                         </StackPanel>
                     </Border>
-
                     <!-- Notes List -->
                     <ScrollViewer x:Name="DockScrollViewer"
                                   Style="{StaticResource ThinScrollViewer}"
-                                  Padding="10,6">
+                                  Padding="14,8">
                         <StackPanel x:Name="NotesStackPanel">
                             <!-- Pinned section -->
                             <TextBlock x:Name="PinnedHeader"
-                                       Text="PINNED"
+                                       Text="Pinned"
                                        Style="{StaticResource SectionHeaderStyle}"
                                        Margin="4,4,0,2"/>
                             <ItemsControl x:Name="PinnedTabs"
                                           ItemsSource="{Binding PinnedNotes, RelativeSource={RelativeSource AncestorType=Window}}"
-                                          ItemTemplate="{StaticResource DockTabTemplate}"
-                                          PreviewMouseLeftButtonUp="OnTabClicked"/>
-
+                                          ItemTemplate="{StaticResource DockTabTemplate}"/>
                             <!-- Notes section -->
                             <TextBlock x:Name="NotesHeader"
-                                       Text="NOTES"
+                                       Text="Notes"
                                        Style="{StaticResource SectionHeaderStyle}"
                                        Margin="4,8,0,2"/>
                             <ItemsControl x:Name="TabsList"
                                           ItemsSource="{Binding VisibleUnpinnedNotes, RelativeSource={RelativeSource AncestorType=Window}}"
-                                          ItemTemplate="{StaticResource DockTabTemplate}"
-                                          PreviewMouseLeftButtonUp="OnTabClicked"/>
+                                          ItemTemplate="{StaticResource DockTabTemplate}"/>
                         </StackPanel>
                     </ScrollViewer>
                 </Grid>
-
                 <!-- Overflow indicator -->
                 <Border x:Name="OverflowTab"
                         Grid.Row="2"
                         Height="34"
-                        Background="{StaticResource SurfaceBrush}"
-                        BorderBrush="{StaticResource BorderBrush}"
+                        Background="{DynamicResource SurfaceBrush}"
+                        BorderBrush="{DynamicResource BorderBrush}"
                         BorderThickness="0,1,0,0"
                         Visibility="Collapsed"
                         Cursor="Hand"
@@ -194,6 +189,6 @@
                                VerticalAlignment="Center"/>
                 </Border>
             </Grid>
-        </Border>
+        </local:ContinuousSurface>
     </Grid>
 </Window>

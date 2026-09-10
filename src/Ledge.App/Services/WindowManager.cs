@@ -13,7 +13,6 @@ public sealed class WindowManager
     private SettingsStore? _settingsStore;
     private DockWindow? _dockWindow;
     private LibraryWindow? _libraryWindow;
-    private SettingsWindow? _settingsWindow;
     private readonly Dictionary<string, NoteWindow> _noteWindows = new();
     private ToastManager? _toastManager;
 
@@ -48,6 +47,9 @@ public sealed class WindowManager
 
     public void ShowNoteWindow(Note note)
     {
+        var current = _noteStore!.Notes.FirstOrDefault(n => n.Id == note.Id);
+        if (current == null) return;
+        note = current;
         if (_noteWindows.TryGetValue(note.Id, out var existing))
         {
             existing.Activate();
@@ -56,15 +58,16 @@ public sealed class WindowManager
         }
 
         var window = new NoteWindow(note, _noteStore!, _settingsStore!);
-        window.DeleteRequested += () => OnNoteDeleteRequested(note);
+        window.DeleteRequested += () => DeleteNote(window.Note ?? note);
         window.Closed += (_, _) => _noteWindows.Remove(note.Id);
         _noteWindows[note.Id] = window;
         window.Show();
         window.FocusEditor();
     }
 
-    private void OnNoteDeleteRequested(Note note)
+    public void DeleteNote(Note note)
     {
+        CloseNoteWindow(note.Id);
         _noteStore!.Delete(note);
         
         // Show undo toast
@@ -90,6 +93,8 @@ public sealed class WindowManager
             _libraryWindow.Closed += (_, _) => _libraryWindow = null;
         }
         _libraryWindow.Show();
+        if (_libraryWindow.WindowState == WindowState.Minimized) _libraryWindow.WindowState = WindowState.Normal;
+        _libraryWindow.ShowNotes();
         _libraryWindow.Activate();
     }
 
@@ -101,32 +106,8 @@ public sealed class WindowManager
 
     public void ShowSettings()
     {
-        try
-        {
-            if (_settingsWindow == null)
-            {
-                _settingsWindow = new SettingsWindow(_settingsStore!);
-                _settingsWindow.Closed += (_, _) => _settingsWindow = null;
-            }
-
-            if (_settingsWindow.WindowState == WindowState.Minimized)
-            {
-                _settingsWindow.WindowState = WindowState.Normal;
-            }
-
-            _settingsWindow.Show();
-            _settingsWindow.Activate();
-            _settingsWindow.Focus();
-        }
-        catch (Exception exception)
-        {
-            _settingsWindow = null;
-            MessageBox.Show(
-                $"Settings could not be opened.\n\n{exception.Message}",
-                "Ledge",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error);
-        }
+        ShowLibrary();
+        _libraryWindow!.ShowSettings();
     }
 
     public void FocusDock()

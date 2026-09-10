@@ -4,7 +4,7 @@ using System.Windows.Threading;
 using System.Runtime.InteropServices;
 using Ledge.Native.Interop;
 
-public sealed class FullscreenDetector
+public sealed class FullscreenDetector : IDisposable
 {
     private readonly DispatcherTimer _timer;
     private WindowManager? _windowManager;
@@ -58,5 +58,12 @@ public sealed class FullscreenDetector
                rect.Right >= info.rcMonitor.Right &&
                rect.Bottom >= info.rcMonitor.Bottom &&
                !hasCaption;
+    }
+
+    public void Dispose()
+    {
+        _timer.Stop();
+        _timer.Tick -= CheckFullscreen;
+        _windowManager = null;
     }
 }

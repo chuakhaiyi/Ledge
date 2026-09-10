@@ -31,13 +31,14 @@ public partial class SearchBox : UserControl
     public SearchBox()
     {
         InitializeComponent();
+        SearchTextBox.ContextMenu = AppMenus.TextEditing(SearchTextBox);
     }
 
     private static void OnSearchTextChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is SearchBox box)
         {
-            box.SearchTextBox.Text = (string)e.NewValue;
+            if (box.SearchTextBox.Text != (string)e.NewValue) box.SearchTextBox.Text = (string)e.NewValue;
         }
     }
 
@@ -50,6 +51,7 @@ public partial class SearchBox : UserControl
     public void FocusSearch()
     {
         SearchTextBox.Focus();
-        SearchTextBox.SelectAll();
+        SearchTextBox.Select(0, 0);
+        SearchTextBox.ScrollToHome();
     }
 }

@@ -20,12 +20,13 @@ internal sealed class HotKeyWindow : IDisposable
     {
         _dispatcher = dispatcher;
         _wndProcDelegate = WndProc;
+        var moduleHandle = User32.GetModuleHandle(null);
 
         var wc = new User32.WNDCLASSEX
         {
             cbSize = Marshal.SizeOf<User32.WNDCLASSEX>(),
             lpfnWndProc = Marshal.GetFunctionPointerForDelegate(_wndProcDelegate),
-            hInstance = Marshal.GetHINSTANCE(typeof(HotKeyWindow).Module),
+            hInstance = moduleHandle,
             lpszClassName = "LedgeHotKeyWindow",
             style = 0,
             hIcon = 0,
@@ -47,7 +48,7 @@ internal sealed class HotKeyWindow : IDisposable
             0, 0, 0, 0,
             nint.Zero,
             nint.Zero,
-            Marshal.GetHINSTANCE(typeof(HotKeyWindow).Module),
+            moduleHandle,
             nint.Zero);
     }
 

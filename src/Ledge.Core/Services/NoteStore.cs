@@ -7,14 +7,17 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using Ledge.Core.Models;
 
-public sealed class NoteStore : INotifyPropertyChanged
+public sealed class NoteStore : INotifyPropertyChanged, IDisposable
 {
     private readonly ObservableCollection<Note> _notes = [];
     private readonly FilePersistence _persistence;
     private readonly Timer _saveTimer;
     private Note? _pendingDelete;
     private Timer? _undoTimer;
-    private bool _saveScheduled;
+    // ponytail: one save lock; use an async queue if large stores stall editing.
+    private readonly object _saveLock = new();
+    private Note[] _saveSnapshot = [];
+    private bool _disposed;
 
     public event PropertyChangedEventHandler? PropertyChanged;
     public event Action<Note>? NoteDeleted;
@@ -35,8 +38,12 @@ public sealed class NoteStore : INotifyPropertyChanged
 
     private void OnSaveTimerElapsed(object? state)
     {
-        _saveScheduled = false;
-        _persistence.SaveAsync(_notes).GetAwaiter().GetResult();
+        lock (_saveLock)
+        {
+            if (_disposed) return;
+            try { _persistence.SaveAsync(_saveSnapshot).GetAwaiter().GetResult(); }
+            catch (Exception exception) { System.Diagnostics.Trace.TraceError("Note save failed: {0}", exception); }
+        }
     }
 
     public async Task LoadAsync()
@@ -74,8 +81,10 @@ public sealed class NoteStore : INotifyPropertyChanged
 
     public void Delete(Note note)
     {
-        _pendingDelete = note;
-        _notes.Remove(note);
+        _undoTimer?.Dispose();
+        _pendingDelete = _notes.FirstOrDefault(n => n.Id == note.Id);
+        if (_pendingDelete == null) return;
+        _notes.Remove(_pendingDelete);
         NoteDeleted?.Invoke(note);
         ScheduleSave();
 
@@ -129,16 +138,36 @@ public sealed class NoteStore : INotifyPropertyChanged
 
     private void ScheduleSave()
     {
-        if (!_saveScheduled)
+        lock (_saveLock)
         {
-            _saveScheduled = true;
+            if (_disposed) return;
+            _saveSnapshot = _notes.Select(n => n with { }).ToArray();
             _saveTimer.Change(TimeSpan.FromMilliseconds(500), Timeout.InfiniteTimeSpan);
         }
     }
 
-    public void Save() => _persistence.SaveAsync(_notes).Wait();
+    public void Save() => ForceSave();
 
-    public void ForceSave() => _persistence.SaveAsync(_notes).Wait();
+    public void ForceSave()
+    {
+        lock (_saveLock)
+        {
+            _saveTimer.Change(Timeout.Infinite, Timeout.Infinite);
+            _saveSnapshot = _notes.Select(n => n with { }).ToArray();
+            _persistence.SaveAsync(_saveSnapshot).GetAwaiter().GetResult();
+        }
+    }
+
+    public void Dispose()
+    {
+        lock (_saveLock)
+        {
+            _disposed = true;
+            _saveTimer.Dispose();
+            _undoTimer?.Dispose();
+            _notes.CollectionChanged -= OnCollectionChanged;
+        }
+    }
 
     private void OnPropertyChanged([CallerMemberName] string? name = null)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));

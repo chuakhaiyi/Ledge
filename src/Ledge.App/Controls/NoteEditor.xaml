@@ -3,19 +3,19 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:Ledge.App.Controls">
 
-    <Border Background="{StaticResource BackgroundBrush}"
-            CornerRadius="8"
-            BorderBrush="{StaticResource BorderBrush}"
+    <local:ContinuousSurface x:Name="ChromeSurface" Background="{DynamicResource MaterialBrush}"
+            CornerRadius="22" Elevation="12"
+            BorderBrush="{DynamicResource BorderBrush}"
             BorderThickness="1">
         <Grid>
             <Grid.RowDefinitions>
-                <RowDefinition Height="30"/>
+                <RowDefinition Height="44"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
             <!-- Titlebar -->
-            <Border Grid.Row="0" Background="{StaticResource OverlayBrush}" CornerRadius="8,8,0,0">
+            <Border Grid.Row="0" Background="Transparent">
                 <Grid Margin="6,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
@@ -30,7 +30,7 @@
                             Click="NewNoteButton_Click"
                             ToolTip="New note (Ctrl+Alt+N)">
                         <Path Data="M5,0 L5,10 M0,5 L10,5"
-                              Stroke="{StaticResource SecondaryTextBrush}"
+                              Stroke="{DynamicResource SecondaryTextBrush}"
                               StrokeThickness="1.5" Width="10" Height="10"/>
                     </Button>
 
@@ -45,10 +45,10 @@
                                 Click="PinButton_Click"
                                 ToolTip="Pin note to dock">
                             <Path x:Name="PinIcon"
-                                  Data="M3,1 L9,1 M6,1 L6,3 M2,3 L10,3 L8,8 L7,8 L7,13 L5,13 L5,8 L4,8 Z"
-                                  Stroke="{StaticResource SecondaryTextBrush}"
+                                  Data="M4,1 L10,1 M5,1 L5,6 L3,9 L11,9 L9,6 L9,1 M7,9 L7,14"
+                                  Stroke="{DynamicResource SecondaryTextBrush}"
                                   Fill="Transparent"
-                                  StrokeThickness="1.2" Width="12" Height="14"/>
+                                  StrokeThickness="1.4" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="14" Height="14"/>
                         </Button>
 
                         <!-- Color picker -->
@@ -57,44 +57,9 @@
                                 Click="ColorButton_Click"
                                 ToolTip="Change color (Ctrl+.)">
                             <Grid Width="18" Height="18">
-                                <Ellipse x:Name="ColorIndicator" Fill="{StaticResource MossNoteBrush}" Stroke="{StaticResource PrimaryTextBrush}" StrokeThickness="1"/>
+                                <Ellipse x:Name="ColorIndicator" Fill="{DynamicResource MossNoteBrush}" Stroke="{DynamicResource PrimaryTextBrush}" StrokeThickness="1"/>
                             </Grid>
-                            <Button.ContextMenu>
-                                <ContextMenu x:Name="ColorPopup"
-                                             PlacementTarget="{Binding ElementName=ColorButton}"
-                                             Placement="Bottom"
-                                             Background="{StaticResource SurfaceBrush}"
-                                             BorderBrush="{StaticResource BorderBrush}"
-                                             BorderThickness="1"
-                                             Padding="8">
-                                    <ContextMenu.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <UniformGrid Rows="1" Columns="8"/>
-                                        </ItemsPanelTemplate>
-                                    </ContextMenu.ItemsPanel>
-                                    <ContextMenu.ItemTemplate>
-                                        <DataTemplate>
-                                            <Border Width="30" Height="30" Margin="3" CornerRadius="15" Background="{Binding ColorBrush}"
-                                                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
-                                                    Cursor="Hand" ToolTip="{Binding ColorName}"
-                                                    MouseLeftButtonDown="ColorChip_Click">
-                                                <Border.Style>
-                                                    <Style TargetType="Border">
-                                                        <Setter Property="Opacity" Value="0.82"/>
-                                                        <Style.Triggers>
-                                                            <Trigger Property="IsMouseOver" Value="True">
-                                                                <Setter Property="Opacity" Value="1"/>
-                                                                <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
-                                                                <Setter Property="BorderThickness" Value="2"/>
-                                                            </Trigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </Border.Style>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ContextMenu.ItemTemplate>
-                                </ContextMenu>
-                            </Button.ContextMenu>
+
                         </Button>
 
                         <!-- Close note window -->
@@ -103,28 +68,53 @@
                                 Click="CloseButton_Click"
                                 ToolTip="Close (Esc)">
                             <Path Data="M0,0 L10,10 M10,0 L0,10"
-                                  Stroke="{StaticResource SecondaryTextBrush}"
+                                  Stroke="{DynamicResource SecondaryTextBrush}"
                                   StrokeThickness="1.5" Width="10" Height="10"/>
                         </Button>
                     </StackPanel>
                 </Grid>
             </Border>
 
+            <Popup x:Name="ColorPopup" PlacementTarget="{Binding ElementName=ColorButton}" Placement="Bottom"
+                   StaysOpen="False" AllowsTransparency="True" Opened="ColorPopup_Opened" Closed="ColorPopup_Closed">
+                <local:ContinuousSurface x:Name="PaletteSurface" Background="{DynamicResource MaterialBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                     BorderThickness="1" CornerRadius="20" Elevation="12" Margin="14" Padding="16" RenderTransformOrigin="0.75,0">
+                    <local:ContinuousSurface.RenderTransform><TranslateTransform x:Name="PaletteSlide"/></local:ContinuousSurface.RenderTransform>
+                    <StackPanel KeyboardNavigation.TabNavigation="Cycle">
+                        <TextBlock Text="Note color" Style="{StaticResource UIText}" FontSize="13" FontWeight="SemiBold" Margin="2,0,0,12"/>
+                        <ItemsControl x:Name="ColorChoices">
+                            <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="4"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate><DataTemplate>
+                                <Button Width="38" Height="38" Margin="3" Background="{Binding ColorBrush}"
+                                        ToolTip="{Binding ColorName}" AutomationProperties.Name="{Binding ColorName}" Click="ColorChip_Click">
+                                    <Button.Style><Style TargetType="Button" BasedOn="{StaticResource SwatchButton}">
+                                        <Style.Triggers><DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/><Setter Property="BorderThickness" Value="2"/>
+                                            <Setter Property="Content" Value="Selected"/>
+                                        </DataTrigger></Style.Triggers>
+                                    </Style></Button.Style>
+                                </Button>
+                            </DataTemplate></ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </local:ContinuousSurface>
+            </Popup>
             <!-- Editor -->
+            <Border x:Name="NoteSurface" Grid.Row="1">
             <TextBox x:Name="TextBox"
-                     Grid.Row="1"
                      Style="{StaticResource NoteTextBox}"
                      TextChanged="TextBox_TextChanged"
-                     Margin="18,18,18,14"
-                     MinHeight="130"
+                     Margin="22,20,22,20"
+                     TextWrapping="Wrap"
                      AcceptsReturn="True"
                      SpellCheck.IsEnabled="True"
                      FontFamily="{StaticResource UIFont}"
                      FontSize="15"
-                     Foreground="{StaticResource PrimaryTextBrush}"/>
+                     Foreground="{DynamicResource PrimaryTextBrush}"/>
+            </Border>
 
             <!-- Footer -->
-            <Grid Grid.Row="2" Margin="18,0,18,14">
+            <Grid Grid.Row="2" Margin="18,8,14,8">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
@@ -135,14 +125,14 @@
                            Grid.Column="0"
                            Style="{StaticResource TimestampText}"
                            VerticalAlignment="Center"
-                           Text="edited just now"/>
+                           Text="Local note"/>
 
-                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center">
-                    <Ellipse x:Name="PinDot" Width="6" Height="6" Fill="{StaticResource AccentBrush}"
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <Ellipse x:Name="PinDot" Style="{StaticResource LabelDot}" Width="6" Height="6" Fill="{DynamicResource AccentBrush}"
                              VerticalAlignment="Center" Margin="0,0,5,0" Visibility="Collapsed"/>
                     <TextBlock x:Name="PinText"
-                               Style="{StaticResource TimestampText}"
-                               Text="pinned"
+                               Style="{StaticResource DotLabelText}" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"
+                               Text="Pinned"
                                Visibility="Collapsed"/>
                 </StackPanel>
 
@@ -151,10 +141,10 @@
                         Click="DeleteButton_Click"
                         ToolTip="Delete note (Ctrl+Backspace)">
                     <Path Data="M2,3 L12,3 M4,3 L4,12 L10,12 L10,3 M5,1 L9,1 M6,5 L6,10 M8,5 L8,10"
-                          Stroke="{StaticResource SecondaryTextBrush}"
+                          Stroke="{DynamicResource SecondaryTextBrush}"
                           StrokeThickness="1.2" Width="14" Height="14"/>
                 </Button>
             </Grid>
         </Grid>
-    </Border>
+    </local:ContinuousSurface>
 </UserControl>

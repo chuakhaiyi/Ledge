@@ -4,6 +4,8 @@ param(
     [string]$OutputDir = "artifacts"
 )
 
+$ErrorActionPreference = 'Stop'
+
 $projectPath = Join-Path $PSScriptRoot "..\src\Ledge.App\Ledge.App.csproj"
 $outputPath = Join-Path $PSScriptRoot "..\$OutputDir"
 
@@ -38,5 +40,5 @@ if ($LASTEXITCODE -eq 0) {
     }
 } else {
     Write-Host "Build failed!" -ForegroundColor Red
-    exit $LASTEXITCODE
+    throw "Publish failed with exit code $LASTEXITCODE"
 }

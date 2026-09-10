@@ -20,13 +20,13 @@ public sealed class SettingsStore : INotifyPropertyChanged
     public DockEdge DockEdge
     {
         get => _settings.DockEdge;
-        set => Set(s => s.DockEdge, value);
+        set => Set(value);
     }
 
     public AppTheme Theme
     {
         get => _settings.Theme;
-        set => Set(s => s.Theme, value);
+        set => Set(value);
     }
 
     public bool StartWithWindows
@@ -36,7 +36,7 @@ public sealed class SettingsStore : INotifyPropertyChanged
         {
             if (_settings.StartWithWindows != value)
             {
-                Set(s => s.StartWithWindows, value);
+                Set(value);
                 ApplyStartWithWindows(value);
             }
         }
@@ -45,37 +45,37 @@ public sealed class SettingsStore : INotifyPropertyChanged
     public bool PortableMode
     {
         get => _settings.PortableMode;
-        set => Set(s => s.PortableMode, value);
+        set => Set(value);
     }
 
     public bool ShowDockOnHover
     {
         get => _settings.ShowDockOnHover;
-        set => Set(s => s.ShowDockOnHover, value);
+        set => Set(value);
     }
 
     public HotkeyBinding NewNoteHotkey
     {
         get => _settings.NewNoteHotkey;
-        set => Set(s => s.NewNoteHotkey, value);
+        set => Set(value);
     }
 
     public HotkeyBinding LibraryHotkey
     {
         get => _settings.LibraryHotkey;
-        set => Set(s => s.LibraryHotkey, value);
+        set => Set(value);
     }
 
     public HotkeyBinding ArchiveHotkey
     {
         get => _settings.ArchiveHotkey;
-        set => Set(s => s.ArchiveHotkey, value);
+        set => Set(value);
     }
 
     public HotkeyBinding FocusDockHotkey
     {
         get => _settings.FocusDockHotkey;
-        set => Set(s => s.FocusDockHotkey, value);
+        set => Set(value);
     }
 
     public SettingsStore(FilePersistence persistence, Settings initial)
@@ -99,7 +99,7 @@ public sealed class SettingsStore : INotifyPropertyChanged
             if (enable)
             {
                 var exePath = Environment.ProcessPath ?? Environment.GetCommandLineArgs()[0];
-                key.SetValue(AppRunValueName, $"\"{exePath}\"");
+                key.SetValue(AppRunValueName, $"\"{exePath}\" --background");
             }
             else
             {
@@ -112,11 +112,10 @@ public sealed class SettingsStore : INotifyPropertyChanged
         }
     }
 
-    public async Task SaveAsync() => await _persistence.SaveSettingsAsync(_settings);
+    public Task SaveAsync() => _persistence.SaveSettingsAsync(_settings);
 
-    private void Set<T>(Func<Settings, T> selector, T value)
+    private void Set<T>(T value, [CallerMemberName] string propName = "")
     {
-        var propName = GetPropertyName(selector);
         var prop = typeof(Settings).GetProperty(propName);
         if (prop != null && !Equals(prop.GetValue(_settings), value))
         {
@@ -126,23 +125,6 @@ public sealed class SettingsStore : INotifyPropertyChanged
             OnPropertyChanged(propName);
             _ = SaveAsync();
         }
-    }
-
-    private static string GetPropertyName<T>(Func<Settings, T> selector)
-    {
-        return selector.Method.Name switch
-        {
-            "get_DockEdge" => nameof(Settings.DockEdge),
-            "get_Theme" => nameof(Settings.Theme),
-            "get_StartWithWindows" => nameof(Settings.StartWithWindows),
-            "get_PortableMode" => nameof(Settings.PortableMode),
-            "get_ShowDockOnHover" => nameof(Settings.ShowDockOnHover),
-            "get_NewNoteHotkey" => nameof(Settings.NewNoteHotkey),
-            "get_LibraryHotkey" => nameof(Settings.LibraryHotkey),
-            "get_ArchiveHotkey" => nameof(Settings.ArchiveHotkey),
-            "get_FocusDockHotkey" => nameof(Settings.FocusDockHotkey),
-            _ => throw new ArgumentException("Unknown selector")
-        };
     }
 
     private void OnPropertyChanged([CallerMemberName] string? name = null)
