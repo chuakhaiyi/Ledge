@@ -6,7 +6,7 @@
     <UseWPF>true</UseWPF>
     <ApplicationIcon>..\..\assets\icon.ico</ApplicationIcon>
     <OutputType>WinExe</OutputType>
-    <Version>1.0.5</Version>
+    <Version>1.0.6</Version>
     <!-- WPF publish trimming is rejected by the .NET SDK; keep the self-contained build reliable. -->
     <PublishTrimmed>false</PublishTrimmed>
     <ServerGarbageCollection>false</ServerGarbageCollection>

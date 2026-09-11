@@ -499,7 +499,6 @@ public partial class DockWindow : Window
         }
 
         var edge = CurrentDockEdge;
-        var cardSpacing = 72.0;
         var cardHeight = 76.0;
         var cardWidth = 216.0;
 
@@ -531,9 +530,12 @@ public partial class DockWindow : Window
             {
                 if (container is ContentPresenter presenter && VisualTreeHelper.GetChild(presenter, 0) is DockTab tab)
                 {
+                    // Keep the vertical stack's visible/hidden proportion identical to
+                    // the top fan: 72px of a 216px card remains visible at rest.
+                    var restingSpacing = cardHeight * (72.0 / 216.0);
                     var spreadSpacing = cardHeight + 8;
                     var availableSpacing = (ActualHeight - cardHeight - 80) / Math.Max(1, count - 1);
-                    var restingSpacing = Math.Min(cardSpacing, Math.Max(40, availableSpacing));
+                    restingSpacing = Math.Min(restingSpacing, Math.Max(0, availableSpacing));
                     var separatedSpacing = Math.Min(spreadSpacing, Math.Max(restingSpacing, availableSpacing));
                     var restingHeight = cardHeight + (count - 1) * restingSpacing;
                     var separatedHeight = cardHeight + (count - 1) * separatedSpacing;
