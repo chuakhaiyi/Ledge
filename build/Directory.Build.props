@@ -11,7 +11,8 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)'=='Release'">
-    <PublishTrimmed>true</PublishTrimmed>
+    <!-- WPF trimming is rejected by the .NET SDK; keep the self-contained publish reliable. -->
+    <PublishTrimmed>false</PublishTrimmed>
     <PublishReadyToRun>true</PublishReadyToRun>
     <DebugType>none</DebugType>
     <DebugSymbols>false</DebugSymbols>

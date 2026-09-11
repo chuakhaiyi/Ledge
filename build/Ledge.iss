@@ -1,5 +1,5 @@
 #ifndef AppVersion
-  #define AppVersion "1.0.4"
+  #define AppVersion "1.0.5"
 #endif
 #ifndef PublishDir
   #define PublishDir SourcePath + "..\artifacts\app"
@@ -21,7 +21,7 @@ OutputBaseFilename=Ledge-Setup
 SetupIconFile=..\assets\icon.ico
 UninstallDisplayIcon={app}\Ledge.exe
 WizardStyle=modern
-Compression=lzma2
+Compression=lzma2/ultra64
 SolidCompression=yes
 AppMutex=Local\Ledge
 CloseApplications=yes
