@@ -231,7 +231,13 @@ public partial class LibraryWindow : Window
             }
         };
         // ContextMenuService must find a menu before its first opening event.
-        listView.ContextMenu = new ContextMenu();
+        listView.ContextMenu = new ContextMenu { StaysOpen = false };
+        listView.ContextMenu.PreviewKeyDown += (_, e) =>
+        {
+            if (e.Key != Key.Escape) return;
+            listView.ContextMenu.IsOpen = false;
+            e.Handled = true;
+        };
 
         listView.KeyDown += (_, e) =>
         {

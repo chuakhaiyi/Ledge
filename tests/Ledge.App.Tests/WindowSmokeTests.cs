@@ -150,6 +150,13 @@ public class WindowSmokeTests
                 Assert.Equal(0, searchInput.CaretIndex);
                 Assert.InRange(searchInput.GetRectFromCharacterIndex(0).X, 34, 41);
                 searchControl.SearchText = "";
+                searchControl.UpdateLayout();
+                var placeholder = (TextBlock)searchControl.FindName("PlaceholderText");
+                var placeholderX = placeholder.TransformToAncestor(searchControl).Transform(new Point()).X;
+                var caretRight = searchInput.TransformToAncestor(searchControl).Transform(
+                    searchInput.GetRectFromCharacterIndex(0).TopRight).X;
+                Assert.True(placeholderX - caretRight >= 5, "Caret overlaps the placeholder.");
+                Capture(searchControl, "search-placeholder");
                 Assert.Equal(text.ContextMenu!.Items.OfType<MenuItem>().Select(m => m.Header), searchInput.ContextMenu!.Items.OfType<MenuItem>().Select(m => m.Header));
                 Assert.All(searchInput.ContextMenu.Items.OfType<MenuItem>(), m => Assert.Same(searchInput, m.CommandTarget));
                 searchInput.ContextMenu.IsOpen = true;
@@ -198,49 +205,61 @@ public class WindowSmokeTests
                 Assert.Contains(Descendants<TextBlock>(library), t => t.Text == "Last edited");
                 Capture(library, "library");
                 library.Close();
-                foreach (var edge in Enum.GetValues<DockEdge>())
+                // Cover every directed edge pair, including both top/side orientations.
+                foreach (var edge in new[] { DockEdge.Left, DockEdge.Right, DockEdge.Top, DockEdge.Left, DockEdge.Top, DockEdge.Right, DockEdge.Left })
                 {
                     var previousEdge = settings.DockEdge;
+                    var origin = new Point(dock.Left, dock.Top);
+                    var originalCards = Descendants<DockTab>(dock).Where(t => t.PeekOnly).ToArray();
+                    var hwnd = new System.Windows.Interop.WindowInteropHelper(dock).Handle;
+                    var root = (Grid)dock.FindName("RootGrid");
+                    var swapObserved = false;
+                    var descriptor = System.ComponentModel.DependencyPropertyDescriptor.FromProperty(DockWindow.CurrentDockEdgeProperty, typeof(DockWindow));
+                    EventHandler swapped = (_, _) =>
+                    {
+                        Assert.Equal(0, ((ScaleTransform)root.RenderTransform).ScaleX);
+                        Assert.Equal(0, ((ScaleTransform)root.RenderTransform).ScaleY);
+                        swapObserved = true;
+                    };
+                    descriptor.AddValueChanged(dock, swapped);
                     settings.DockEdge = edge;
                     if (previousEdge != edge)
                     {
-                        var travel = (Window?)typeof(DockWindow).GetField("_travelWindow", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(dock);
-                        Assert.NotNull(travel);
-                        var stage = (Grid)((Canvas)travel!.Content).Children[0];
-                        var slide = (TranslateTransform)stage.RenderTransform;
-                        var origin = new Point(slide.X, slide.Y);
-                        var destination = new Point(dock.Left, dock.Top);
+                        var scale = (ScaleTransform)root.RenderTransform;
+                        var presenter = (FrameworkElement)VisualTreeHelper.GetParent(originalCards[0]);
+                        var slide = (TranslateTransform)presenter.RenderTransform;
+                        Assert.Equal(origin, new Point(dock.Left, dock.Top));
+                        Assert.Equal(0, slide.X);
+                        Assert.Equal(0, slide.Y);
                         var frames = new GifBitmapEncoder();
                         var captureTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(33) };
-                        captureTimer.Tick += (_, _) => { if (travel.IsVisible) CaptureTravelFrame(travel, frames); };
-                        if (Environment.GetEnvironmentVariable("LEDGE_CAPTURE_DIR") != null) captureTimer.Start();
-                        Pump(180);
-                        Assert.NotEqual(origin, new Point(slide.X, slide.Y));
-                        var first = new Point(slide.X, slide.Y);
-                        var at180 = Snapshot(travel);
-                        dock.UpdatePosition(); // Display/tray callbacks cannot compete with travel.
+                        captureTimer.Tick += (_, _) => CaptureDockFrame(dock, frames);
+                        if (Environment.GetEnvironmentVariable("LEDGE_CAPTURE_DIR") != null)
+                        {
+                            CaptureDockFrame(dock, frames);
+                            captureTimer.Start();
+                        }
+                        Pump(120);
+                        Assert.True(Math.Abs(slide.X) + Math.Abs(slide.Y) > .1, "Cards did not converge.");
+                        Assert.Equal(origin, new Point(dock.Left, dock.Top));
+                        dock.UpdatePosition();
                         dock.Collapse();
-                        Assert.Equal(destination, new Point(dock.Left, dock.Top));
-                        Pump(180);
-                        Assert.True(travel.IsVisible);
-                        Assert.NotEqual(first, new Point(slide.X, slide.Y));
-                        var at360 = Snapshot(travel);
-                        Pump(180);
-                        Assert.True(travel.IsVisible);
-                        var at540 = Snapshot(travel);
-                        Pump(350);
+                        Assert.Equal(origin, new Point(dock.Left, dock.Top));
+                        Pump(600);
                         captureTimer.Stop();
-                        Assert.False(travel.IsVisible);
-                        Assert.Equal(1, dock.Opacity);
+                        Assert.True(swapObserved, "Edge never changed at the invisible midpoint.");
+                        Assert.Equal(edge, dock.CurrentDockEdge);
+                        Assert.Same(Transform.Identity, root.RenderTransform);
+                        Assert.Equal(hwnd, new System.Windows.Interop.WindowInteropHelper(dock).Handle);
+                        Assert.Equal(originalCards, Descendants<DockTab>(dock).Where(t => t.PeekOnly).ToArray());
+                        Assert.DoesNotContain(Application.Current.Windows.Cast<Window>(), w => w != dock && w.IsVisible);
                         if (Environment.GetEnvironmentVariable("LEDGE_CAPTURE_DIR") is { } captures)
                         {
-                            SaveSnapshot(at180, Path.Combine(captures, "edge-travel-" + edge + "-180ms.png"));
-                            SaveSnapshot(at360, Path.Combine(captures, "edge-travel-" + edge + "-360ms.png"));
-                            SaveSnapshot(at540, Path.Combine(captures, "edge-travel-" + edge + "-540ms.png"));
-                            using var output = File.Create(Path.Combine(captures, "edge-travel-" + edge + ".gif"));
+                            using var output = File.Create(Path.Combine(captures, $"edge-merge-{previousEdge}-{edge}.gif"));
                             frames.Save(output);
                         }
                     }
+                    descriptor.RemoveValueChanged(dock, swapped);
                     dock.UpdateLayout();
                     Dispatcher.CurrentDispatcher.Invoke(() => { }, DispatcherPriority.ApplicationIdle);
                     typeof(DockWindow).GetMethod("Peek", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(dock, null);
@@ -255,6 +274,27 @@ public class WindowSmokeTests
                         Assert.True(bounds.Right > 10 && bounds.Left < dock.ActualWidth - 10, $"Peek text offscreen on {edge}: {bounds}");
                     }
                     var hoverTab = Descendants<DockTab>(dock).First(t => t.PeekOnly);
+                    if (edge == DockEdge.Top)
+                    {
+                        var topCards = Descendants<DockTab>(dock).Where(t => t.PeekOnly).ToArray();
+                        foreach (var current in topCards)
+                        {
+                            typeof(DockTab).GetMethod("Tab_MouseEnter", BindingFlags.Instance | BindingFlags.NonPublic)!
+                                .Invoke(current, new object[] { current, new MouseEventArgs(Mouse.PrimaryDevice, 0) });
+                            Pump(300);
+                            foreach (var next in topCards.Where(t => t != current))
+                            {
+                                var surface = (FrameworkElement)next.FindName("TabBorder");
+                                var bounds = surface.TransformToAncestor(dock).TransformBounds(new Rect(surface.RenderSize));
+                                var point = new Point(bounds.Left + 8, 12);
+                                Assert.True(dock.InputHitTest(point) is DependencyObject hit && next.IsAncestorOf(hit),
+                                    "Expanded top card blocks another card's hover target.");
+                            }
+                            typeof(DockTab).GetMethod("Tab_MouseLeave", BindingFlags.Instance | BindingFlags.NonPublic)!
+                                .Invoke(current, new object[] { current, new MouseEventArgs(Mouse.PrimaryDevice, 0) });
+                        }
+                        Capture(dock, "top-spread");
+                    }
                     var hoverSlide = (TranslateTransform)hoverTab.FindName("Slide");
                     var resting = new Point(hoverSlide.X, hoverSlide.Y);
                     var hoverEvent = new MouseEventArgs(Mouse.PrimaryDevice, 0);
@@ -279,16 +319,63 @@ public class WindowSmokeTests
                     Capture(dock, "dock-" + edge);
                 }
                 settings.DockEdge = DockEdge.Right;
+                Pump(750);
                 dock.Expand();
                 Pump();
                 foreach (var tab in Descendants<DockTab>(dock).Where(t => !t.PeekOnly && t.Note!.Pinned))
                     AssertCentered((FrameworkElement)tab.FindName("PinnedDot"), (FrameworkElement)tab.FindName("HeaderWord"), tab);
                 Capture(dock, "dock-expanded");
+                settings.DockEdge = DockEdge.Top;
+                Pump(120);
+                settings.DockEdge = DockEdge.Left;
+                Pump(750);
+                Assert.Equal(DockEdge.Left, dock.CurrentDockEdge);
+                Assert.True(((FrameworkElement)dock.FindName("ExpandedView")).IsVisible);
+                Assert.Same(Transform.Identity, ((Grid)dock.FindName("RootGrid")).RenderTransform);
+                dock.FocusDock();
+                Pump(250);
+                Assert.True(((FrameworkElement)dock.FindName("ExpandedView")).IsVisible);
+                var dockKey = new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(dock), 0, Key.Escape)
+                { RoutedEvent = Keyboard.KeyDownEvent };
+                dock.RaiseEvent(dockKey);
+                Pump(250);
+                Assert.True(dockKey.Handled);
+                Assert.False(((FrameworkElement)dock.FindName("ExpandedView")).IsVisible);
+                dock.FocusDock();
+                Pump(250);
+                typeof(DockWindow).GetMethod("Window_Deactivated", BindingFlags.Instance | BindingFlags.NonPublic)!
+                    .Invoke(dock, new object?[] { dock, EventArgs.Empty });
+                Pump(250);
+                Assert.False(((FrameworkElement)dock.FindName("ExpandedView")).IsVisible);
                 dock.Close();
                 var manager = new WindowManager();
                 manager.Initialize(store, settings);
+                manager.ShowDock();
+                Pump(250);
+                var managedDock = Assert.Single(app.Windows.OfType<DockWindow>().Where(window => window.IsVisible));
+                Assert.True(managedDock.IsVisible);
                 using var tray = new SystemTrayService();
                 tray.Initialize(manager);
+                typeof(SystemTrayService).GetMethod("ShowContextMenu", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(tray, null);
+                var hideMenu = (ContextMenu)typeof(SystemTrayService).GetField("_contextMenu", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(tray)!;
+                Assert.False(hideMenu.StaysOpen);
+                var outsideClick = new MouseButtonEventArgs(Mouse.PrimaryDevice, 0, MouseButton.Left)
+                { RoutedEvent = Mouse.PreviewMouseDownOutsideCapturedElementEvent };
+                hideMenu.RaiseEvent(outsideClick);
+                Pump(100);
+                Assert.False(hideMenu.IsOpen);
+                typeof(SystemTrayService).GetMethod("ShowContextMenu", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(tray, null);
+                hideMenu = (ContextMenu)typeof(SystemTrayService).GetField("_contextMenu", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(tray)!;
+                var hideItem = hideMenu.Items.OfType<MenuItem>().Single(m => Equals(m.Header, "Hide notes"));
+                hideItem.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+                Pump(100);
+                Assert.False(managedDock.IsVisible);
+                typeof(SystemTrayService).GetMethod("ShowContextMenu", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(tray, null);
+                var unhideMenu = (ContextMenu)typeof(SystemTrayService).GetField("_contextMenu", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(tray)!;
+                var unhideItem = unhideMenu.Items.OfType<MenuItem>().Single(m => Equals(m.Header, "Unhide notes"));
+                unhideItem.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+                Pump(250);
+                Assert.True(managedDock.IsVisible);
                 for (var i = 0; i < 2; i++)
                 {
                     if (i == 1) app.Resources.MergedDictionaries.Add(dark);
@@ -296,6 +383,7 @@ public class WindowSmokeTests
                     var menu = (ContextMenu)typeof(SystemTrayService).GetField("_contextMenu", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(tray)!;
                     Assert.Equal(PlacementMode.MousePoint, menu.Placement);
                     menu.UpdateLayout();
+                    Assert.False(menu.StaysOpen);
                     Assert.IsType<ContinuousSurface>(menu.Template.FindName("MenuSurface", menu));
                     Assert.Equal(2, menu.Items.OfType<Separator>().Count());
                     foreach (var separator in menu.Items.OfType<Separator>())
@@ -369,16 +457,20 @@ public class WindowSmokeTests
         Dispatcher.PushFrame(frame);
     }
 
-    private static void CaptureTravelFrame(Window travel, GifBitmapEncoder frames)
+    private static void CaptureDockFrame(Window dock, GifBitmapEncoder frames)
     {
-        // Exercise real WPF rendering during travel, not just the target transform value.
+        // Render the actual clipped window, at its screen position, without auto-fitting
+        // a VisualBrush (which would hide position and clipping regressions).
+        var screen = SystemParameters.WorkArea;
         var width = 800;
-        var height = (int)(width * travel.ActualHeight / travel.ActualWidth);
+        var ratio = width / screen.Width;
+        var height = (int)(screen.Height * ratio);
         var visual = new DrawingVisual();
         using (var drawing = visual.RenderOpen())
         {
             drawing.DrawRectangle(Brushes.DimGray, null, new Rect(0, 0, width, height));
-            drawing.DrawRectangle(new VisualBrush((Visual)travel.Content), null, new Rect(0, 0, width, height));
+            drawing.DrawImage(Snapshot(dock), new Rect((dock.Left - screen.Left) * ratio,
+                (dock.Top - screen.Top) * ratio, dock.ActualWidth * ratio, dock.ActualHeight * ratio));
         }
         var bitmap = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
         bitmap.Render(visual);

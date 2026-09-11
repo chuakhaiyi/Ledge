@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Input;
 using System.Windows.Threading;
 using Hardcodet.Wpf.TaskbarNotification;
 
@@ -32,7 +33,7 @@ public sealed class SystemTrayService : IDisposable
         if (_contextMenu != null) _contextMenu.IsOpen = false;
         // Assigning TaskbarIcon.ContextMenu makes its native callback reposition
         // the popup again at the hidden tray window. Own the WPF popup instead.
-        var menu = new ContextMenu { Placement = PlacementMode.MousePoint };
+        var menu = new ContextMenu { Placement = PlacementMode.MousePoint, StaysOpen = false };
         _contextMenu = menu;
         void Add(string title, Action action)
         {
@@ -43,11 +44,20 @@ public sealed class SystemTrayService : IDisposable
         Add("New Note", _windowManager.CreateNewNote);
         Add("All Notes", _windowManager.ShowLibrary);
         Add("Archived", _windowManager.ShowArchive);
+        Add(_windowManager.IsDockHidden ? "Unhide notes" : "Hide notes", _windowManager.ToggleNotesVisibility);
         menu.Items.Add(new Separator());
         Add("Settings", _windowManager.ShowSettings);
         menu.Items.Add(new Separator());
         Add("Exit Ledge", () => Application.Current.Shutdown());
         menu.Closed += (_, _) => { if (ReferenceEquals(_contextMenu, menu)) _contextMenu = null; };
+        menu.AddHandler(Mouse.PreviewMouseDownOutsideCapturedElementEvent,
+            new MouseButtonEventHandler((_, _) => menu.IsOpen = false));
+        menu.PreviewKeyDown += (_, e) =>
+        {
+            if (e.Key != Key.Escape) return;
+            menu.IsOpen = false;
+            e.Handled = true;
+        };
         menu.IsOpen = true;
     }
 

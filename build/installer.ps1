@@ -9,6 +9,7 @@ if (!$SkipPublish) { & "$PSScriptRoot\publish.ps1" -Configuration $Configuration
 if (!$CompilerPath) {
     $CompilerPath = @(
         (Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'),
+        (Join-Path $env:LOCALAPPDATA 'Programs\Inno Setup 6\ISCC.exe'),
         (Join-Path $repo 'artifacts\tooling\inno\ISCC.exe')
     ) | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
 }

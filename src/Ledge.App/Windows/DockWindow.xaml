@@ -10,6 +10,7 @@
         Focusable="True"
         MouseEnter="Window_MouseEnter"
         MouseLeave="Window_MouseLeave"
+        Deactivated="Window_Deactivated"
         MouseLeftButtonDown="Window_MouseLeftButtonDown"
         SizeChanged="Window_SizeChanged"
         SourceInitialized="Window_SourceInitialized">

@@ -26,16 +26,41 @@ public partial class DockTab : UserControl
     public DockEdge Edge { get => (DockEdge)GetValue(EdgeProperty); set => SetValue(EdgeProperty, value); }
 
     private bool _hovered;
+    private readonly TranslateTransform _fanShift = new();
+    internal bool IsRelocating { get; set; }
+
+    internal void FreezeSlide() { SpringMotion.Stop(Slide); SpringMotion.Stop(_fanShift); }
+
+    internal void SetFanLayout(double width, double offset, bool animate)
+        => SetFanLayout(width, offset, 0, animate);
+
+    internal void SetFanLayout(double width, double offsetX, double offsetY, bool animate)
+    {
+        Width = width;
+        PeekWord.Width = Edge == DockEdge.Top ? Math.Max(8, width - 28) : 84;
+        if (animate)
+        {
+            SpringMotion.To(_fanShift, TranslateTransform.XProperty, offsetX, alwaysAnimate: true);
+            SpringMotion.To(_fanShift, TranslateTransform.YProperty, offsetY, alwaysAnimate: true);
+        }
+        else
+        {
+            SpringMotion.Stop(_fanShift);
+            _fanShift.X = offsetX;
+            _fanShift.Y = offsetY;
+        }
+    }
 
     public DockTab()
     {
         InitializeComponent();
+        RenderTransform = _fanShift;
         ContextMenu = AppMenus.NoteActions(() =>
         {
             if (Note != null) App.GetService<WindowManager>().DeleteNote(Note);
         });
         Margin = new Thickness(0, 5, 0, 5);
-        Unloaded += (_, _) => SpringMotion.Stop(Slide);
+        Unloaded += (_, _) => FreezeSlide();
     }
 
     private static void OnNoteChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -61,6 +86,7 @@ public partial class DockTab : UserControl
 
     internal void SettleLayout()
     {
+        _hovered = false;
         SpringMotion.Stop(Slide);
         UpdateSlide(false);
     }
@@ -97,6 +123,7 @@ public partial class DockTab : UserControl
 
     private void Tab_MouseEnter(object sender, MouseEventArgs e)
     {
+        if (IsRelocating) return;
         _hovered = true;
         if (VisualTreeHelper.GetParent(this) is ContentPresenter presenter) Panel.SetZIndex(presenter, 1);
         UpdateSlide();
@@ -104,6 +131,7 @@ public partial class DockTab : UserControl
 
     private void Tab_MouseLeave(object sender, MouseEventArgs e)
     {
+        if (IsRelocating) return;
         _hovered = false;
         if (VisualTreeHelper.GetParent(this) is ContentPresenter presenter) Panel.SetZIndex(presenter, 0);
         UpdateSlide();

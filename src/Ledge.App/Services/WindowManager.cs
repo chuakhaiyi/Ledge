@@ -15,6 +15,9 @@ public sealed class WindowManager
     private LibraryWindow? _libraryWindow;
     private readonly Dictionary<string, NoteWindow> _noteWindows = new();
     private ToastManager? _toastManager;
+    private bool _dockHidden;
+
+    public bool IsDockHidden => _dockHidden;
 
     public void Initialize(NoteStore noteStore, SettingsStore settingsStore)
     {
@@ -25,6 +28,7 @@ public sealed class WindowManager
 
     public void ShowDock()
     {
+        if (_dockHidden) return;
         if (_dockWindow == null)
         {
             _dockWindow = new DockWindow(_noteStore!, _settingsStore!);
@@ -36,6 +40,20 @@ public sealed class WindowManager
 
     public void HideDock()
     {
+        _dockWindow?.Hide();
+    }
+
+    public void ToggleNotesVisibility()
+    {
+        if (_dockHidden)
+        {
+            _dockHidden = false;
+            ShowDock();
+            return;
+        }
+
+        _dockHidden = true;
+        _dockWindow?.Collapse();
         _dockWindow?.Hide();
     }
 
@@ -112,6 +130,7 @@ public sealed class WindowManager
 
     public void FocusDock()
     {
+        if (_dockHidden) return;
         _dockWindow?.FocusDock();
     }
 

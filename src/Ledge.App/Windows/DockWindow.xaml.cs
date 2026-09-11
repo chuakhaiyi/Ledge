@@ -10,7 +10,6 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
-using System.Windows.Media.Imaging;
 using System.Diagnostics;
 using System.Windows.Threading;
 using Ledge.Native.Interop;
@@ -26,6 +25,7 @@ public partial class DockWindow : Window
     private bool _isExpanded = false;
     private bool _isPeeking = false;
     private bool _isKeyboardFocused = false;
+    private bool _dismissOnDeactivate;
     private int _keyboardIndex = -1;
     private readonly DispatcherTimer _hoverDelayTimer;
     private readonly DispatcherTimer _hoverExitTimer;
@@ -35,7 +35,6 @@ public partial class DockWindow : Window
     private Dictionary<string, Note> _observedNotes = new();
     private bool _changingEdge;
     private bool _closed;
-    private Window? _travelWindow;
     private bool _bindingsInitialized;
 
     public static readonly DependencyProperty PinnedNotesProperty =
@@ -119,7 +118,6 @@ public partial class DockWindow : Window
         Closed += (_, _) =>
         {
             _closed = true;
-            _travelWindow?.Close();
             _previewTimer.Stop();
             _hoverDelayTimer.Stop();
             _hoverExitTimer.Stop();
@@ -157,107 +155,89 @@ public partial class DockWindow : Window
                 yield return tab;
     }
 
-    private Dictionary<string, (BitmapSource Image, Rect Bounds)> SnapshotDock()
-    {
-        UpdateLayout();
-        var snapshots = new Dictionary<string, (BitmapSource, Rect)>();
-        void Capture(string key, FrameworkElement surface)
-        {
-            var region = surface.TransformToAncestor(this).TransformBounds(new Rect(surface.RenderSize));
-            var dpi = VisualTreeHelper.GetDpi(this);
-            var bitmap = new RenderTargetBitmap(Math.Max(1, (int)Math.Ceiling(region.Width * dpi.DpiScaleX)), Math.Max(1, (int)Math.Ceiling(region.Height * dpi.DpiScaleY)), dpi.PixelsPerInchX, dpi.PixelsPerInchY, PixelFormats.Pbgra32);
-            var drawing = new DrawingVisual();
-            using (var context = drawing.RenderOpen())
-                context.DrawRectangle(new VisualBrush(surface) { ViewboxUnits = BrushMappingMode.Absolute, Viewbox = new Rect(surface.RenderSize) }, null, new Rect(surface.RenderSize));
-            bitmap.Render(drawing);
-            bitmap.Freeze();
-            snapshots.Add(key, (bitmap, new Rect(Left + region.X, Top + region.Y, region.Width, region.Height)));
-        }
-        if (_isExpanded) Capture("panel", ExpandedView);
-        else
-        {
-            foreach (var tab in CollapsedCards())
-                Capture(tab.Note!.Id, (FrameworkElement)tab.FindName("TabBorder"));
-            if (snapshots.Count == 0) Capture("empty", CollapsedEmptyMark);
-        }
-        return snapshots;
-    }
-
     private async void ChangeEdge()
     {
         if (_changingEdge || _closed) return;
         _changingEdge = true;
+        var cards = CollapsedCards().ToArray();
+        var scale = new ScaleTransform();
+        RootGrid.RenderTransform = scale;
+        foreach (var tab in cards) { tab.IsRelocating = true; tab.FreezeSlide(); }
+        SpringMotion.Stop(PanelSlide);
+        _hoverDelayTimer.Stop();
+        _hoverExitTimer.Stop();
+
+        // Animate the live presenters inside their original HWND and clipping region.
+        // Relocate only at zero scale: no screenshot, new window, or visible position jump.
+        async Task Phase(bool merge)
+        {
+            RootGrid.UpdateLayout();
+            var surfaces = _isExpanded
+                ? new[] { (Owner: (FrameworkElement)ExpandedGrid, Surface: (FrameworkElement)ExpandedGrid) }
+                : cards.Select(tab => (Owner: (FrameworkElement)VisualTreeHelper.GetParent(tab),
+                    Surface: (FrameworkElement)tab.FindName("TabBorder"))).ToArray();
+            if (surfaces.Length == 0)
+                surfaces = new[] { (Owner: (FrameworkElement)CollapsedEmptyMark, Surface: (FrameworkElement)CollapsedEmptyMark) };
+            var centers = surfaces.Select(item =>
+            {
+                var bounds = item.Surface.TransformToAncestor(RootGrid).TransformBounds(new Rect(item.Surface.RenderSize));
+                return new Point(bounds.X + bounds.Width / 2, bounds.Y + bounds.Height / 2);
+            }).ToArray();
+            var center = new Point(centers.Average(p => p.X), centers.Average(p => p.Y));
+            scale.CenterX = Math.Clamp(center.X, 0, ActualWidth);
+            scale.CenterY = Math.Clamp(center.Y, 0, ActualHeight);
+            var storyboard = new Storyboard();
+            void Animate(FrameworkElement target, string property, double start, double end, int delay, int duration)
+            {
+                var animation = new DoubleAnimation(start, end, TimeSpan.FromMilliseconds(duration))
+                {
+                    BeginTime = TimeSpan.FromMilliseconds(delay),
+                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut }
+                };
+                Storyboard.SetTarget(animation, target);
+                Storyboard.SetTargetProperty(animation, new PropertyPath(property));
+                storyboard.Children.Add(animation);
+            }
+            for (var i = 0; i < surfaces.Length; i++)
+            {
+                var offset = center - centers[i];
+                var owner = surfaces[i].Owner;
+                owner.RenderTransform = new TranslateTransform(merge ? 0 : offset.X, merge ? 0 : offset.Y);
+                Animate(owner, "RenderTransform.X", merge ? 0 : offset.X, merge ? offset.X : 0, merge ? 0 : 100, 240);
+                Animate(owner, "RenderTransform.Y", merge ? 0 : offset.Y, merge ? offset.Y : 0, merge ? 0 : 100, 240);
+            }
+            Animate(RootGrid, "RenderTransform.ScaleX", merge ? 1 : 0, merge ? 0 : 1, merge ? 240 : 0, 100);
+            Animate(RootGrid, "RenderTransform.ScaleY", merge ? 1 : 0, merge ? 0 : 1, merge ? 240 : 0, 100);
+            var completed = new TaskCompletionSource();
+            void Finish(object? sender, EventArgs args) => completed.TrySetResult();
+            storyboard.Completed += Finish;
+            Closed += Finish;
+            storyboard.Begin(this, true);
+            try { await completed.Task; }
+            finally
+            {
+                // Commit the invisible/visible endpoint before removing animation clocks.
+                scale.ScaleX = scale.ScaleY = merge ? 0 : 1;
+                storyboard.Remove(this);
+                Closed -= Finish;
+                foreach (var item in surfaces) item.Owner.RenderTransform = Transform.Identity;
+            }
+        }
+
         try
         {
             while (!_closed && CurrentDockEdge != _settingsStore.DockEdge)
             {
-                if (!IsLoaded || !IsVisible)
-                {
-                    PlaceDock(); UpdateLayoutForEdge(); UpdateLayout(); PositionCollapsedItems();
-                    foreach (var tab in CollapsedCards()) tab.SettleLayout();
-                    break;
-                }
-                _hoverDelayTimer.Stop(); _hoverExitTimer.Stop();
-                var before = SnapshotDock();
-                var screen = SystemParameters.WorkArea;
-                var canvas = new Canvas();
-                foreach (var card in before.Values)
-                {
-                    var stage = new Grid { Width = card.Bounds.Width, Height = card.Bounds.Height, RenderTransform = new TranslateTransform(card.Bounds.Left - screen.Left, card.Bounds.Top - screen.Top) };
-                    stage.Children.Add(new Image { Source = card.Image, Width = card.Bounds.Width, Height = card.Bounds.Height, Stretch = Stretch.Fill });
-                    canvas.Children.Add(stage);
-                }
-                var travel = new Window { Left = screen.Left, Top = screen.Top, Width = screen.Width, Height = screen.Height, WindowStyle = WindowStyle.None, AllowsTransparency = true, Background = Brushes.Transparent, ShowActivated = false, ShowInTaskbar = false, Topmost = true, IsHitTestVisible = false, Content = canvas };
-                _travelWindow = travel;
-                travel.SourceInitialized += (_, _) =>
-                {
-                    var hwnd = new WindowInteropHelper(travel).Handle;
-                    User32.SetWindowLongPtr(hwnd, User32.GWL_EXSTYLE, User32.GetWindowLongPtr(hwnd, User32.GWL_EXSTYLE) | User32.WS_EX_TOOLWINDOW | User32.WS_EX_TRANSPARENT | User32.WS_EX_NOACTIVATE);
-                };
-                travel.Show();
-                Opacity = 0;
-                PlaceDock(); UpdateLayoutForEdge(); UpdateLayout(); PositionCollapsedItems();
-                foreach (var tab in CollapsedCards()) tab.SettleLayout();
-                UpdateLayout();
-                var after = SnapshotDock();
-                // One clock owns travel and crossfade. No spring overshoot, image stretching,
-                // or timer racing the final compositor frame at the destination edge.
-                var duration = TimeSpan.FromMilliseconds(720);
-                var storyboard = new Storyboard();
-                void Animate(FrameworkElement target, string property, double from, double to)
-                {
-                    var animation = new DoubleAnimation(from, to, property == "Opacity" ? TimeSpan.FromMilliseconds(120) : duration) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut } };
-                    Storyboard.SetTarget(animation, target);
-                    Storyboard.SetTargetProperty(animation, new PropertyPath(property));
-                    storyboard.Children.Add(animation);
-                }
-                var index = 0;
-                foreach (var (key, oldCard) in before)
-                {
-                    var card = after[key];
-                    var stage = (Grid)canvas.Children[index++];
-                    var slide = (TranslateTransform)stage.RenderTransform;
-                    var oldImage = (Image)stage.Children[0];
-                    var newImage = new Image { Source = card.Image, Width = card.Bounds.Width, Height = card.Bounds.Height, Opacity = 0, Stretch = Stretch.Fill };
-                    stage.Children.Add(newImage);
-                    stage.Width = Math.Max(oldCard.Bounds.Width, card.Bounds.Width);
-                    stage.Height = Math.Max(oldCard.Bounds.Height, card.Bounds.Height);
-                    slide.X -= (stage.Width - oldCard.Bounds.Width) / 2;
-                    slide.Y -= (stage.Height - oldCard.Bounds.Height) / 2;
-                    Animate(stage, "RenderTransform.X", slide.X, card.Bounds.Left - screen.Left - (stage.Width - card.Bounds.Width) / 2);
-                    Animate(stage, "RenderTransform.Y", slide.Y, card.Bounds.Top - screen.Top - (stage.Height - card.Bounds.Height) / 2);
-                    Animate(oldImage, "Opacity", 1, 0);
-                    Animate(newImage, "Opacity", 0, 1);
-                }
-                var completed = new TaskCompletionSource();
-                storyboard.Completed += (_, _) => completed.TrySetResult();
-                travel.Closed += (_, _) => completed.TrySetResult();
-                travel.UpdateLayout();
-                storyboard.Begin(travel);
-                await completed.Task;
+                if (IsLoaded && IsVisible) await Phase(true);
                 if (_closed) return;
-                Opacity = 1;
-                travel.Close(); _travelWindow = null;
+                // Scale remains exactly zero through the orientation and native-window swap.
+                PlaceDock();
+                UpdateLayoutForEdge();
+                UpdateLayout();
+                PositionCollapsedItems();
+                foreach (var tab in cards) tab.SettleLayout();
+                UpdateLayout();
+                if (IsLoaded && IsVisible) await Phase(false);
             }
         }
         catch (Exception exception)
@@ -267,8 +247,8 @@ public partial class DockWindow : Window
         }
         finally
         {
-            _travelWindow?.Close(); _travelWindow = null;
-            if (!_closed) Opacity = 1;
+            RootGrid.RenderTransform = Transform.Identity;
+            foreach (var tab in cards) tab.IsRelocating = false;
             _changingEdge = false;
         }
     }
@@ -414,12 +394,14 @@ public partial class DockWindow : Window
         HoverZone.Visibility = IsPeeking ? Visibility.Visible : Visibility.Collapsed;
         _isExpanded = false;
         _isKeyboardFocused = false;
+        _dismissOnDeactivate = false;
         SpringMotion.To(PanelSlide, TranslateTransform.XProperty, CurrentDockEdge == DockEdge.Left ? -16 : CurrentDockEdge == DockEdge.Right ? 16 : 0, alwaysAnimate: true);
         SpringMotion.To(PanelSlide, TranslateTransform.YProperty, CurrentDockEdge == DockEdge.Top ? -12 : 0, alwaysAnimate: true);
         FadeView(ExpandedView, false);
         FadeView(CollapsedView, true);
         UpdatePosition();
         UpdateLayoutForEdge();
+        PositionCollapsedItems();
     }
 
     private static void FadeView(UIElement view, bool visible)
@@ -445,6 +427,7 @@ public partial class DockWindow : Window
         ExpandedView.Visibility = Visibility.Collapsed;
         UpdatePosition();
         UpdateLayoutForEdge();
+        PositionCollapsedItems();
     }
 
     private void UpdateBindings()
@@ -515,8 +498,8 @@ public partial class DockWindow : Window
             return;
         }
 
-        var edge = _settingsStore.DockEdge;
-        var cardSpacing = 86.0;
+        var edge = CurrentDockEdge;
+        var cardSpacing = 72.0;
         var cardHeight = 76.0;
         var cardWidth = 216.0;
 
@@ -529,23 +512,40 @@ public partial class DockWindow : Window
 
             if (edge == DockEdge.Top)
             {
-                var topSpacing = Math.Min(72, (ActualWidth - cardWidth) / Math.Max(1, count - 1));
+                // Open the whole fan once, so individual hover never covers a sibling.
+                cardWidth = Math.Max(32, Math.Min(216, (ActualWidth - 16 - (count - 1) * 8) / count));
+                var topSpacing = Math.Min(72, cardWidth + 8);
                 var totalWidth = cardWidth + (count - 1) * topSpacing;
-                Canvas.SetLeft(container, Math.Max(0, (ActualWidth - totalWidth) / 2 + index * topSpacing));
+                var restingLeft = (ActualWidth - totalWidth) / 2 + index * topSpacing;
+                var spreadWidth = count * cardWidth + (count - 1) * 8;
+                var spreadLeft = (ActualWidth - spreadWidth) / 2 + index * (cardWidth + 8);
+                Canvas.SetLeft(container, restingLeft);
                 Canvas.SetTop(container, 0);
-                HoverZone.Width = totalWidth;
+                if (container is ContentPresenter presenter && VisualTreeHelper.GetChild(presenter, 0) is DockTab tab)
+                    tab.SetFanLayout(cardWidth, IsPeeking ? spreadLeft - restingLeft : 0, !_changingEdge);
+                HoverZone.Width = spreadWidth;
                 HoverZone.Height = 92;
-                HoverZone.Margin = new Thickness(Math.Max(0, (ActualWidth - totalWidth) / 2), 0, 0, 0);
+                HoverZone.Margin = new Thickness(Math.Max(0, (ActualWidth - spreadWidth) / 2), 0, 0, 0);
             }
             else
             {
-                cardSpacing = Math.Min(cardSpacing, (ActualHeight - cardHeight - 80) / Math.Max(1, count - 1));
-                var totalHeight = cardHeight + (count - 1) * cardSpacing;
-                Canvas.SetLeft(container, edge == DockEdge.Right ? ActualWidth - cardWidth : 0);
-                Canvas.SetTop(container, Math.Max(0, (ActualHeight - totalHeight) / 2 + index * cardSpacing));
-                HoverZone.Width = cardWidth;
-                HoverZone.Height = totalHeight + 16;
-                HoverZone.Margin = new Thickness(edge == DockEdge.Right ? ActualWidth - cardWidth : 0, Math.Max(0, (ActualHeight - totalHeight) / 2 - 8), 0, 0);
+                if (container is ContentPresenter presenter && VisualTreeHelper.GetChild(presenter, 0) is DockTab tab)
+                {
+                    var spreadSpacing = cardHeight + 8;
+                    var availableSpacing = (ActualHeight - cardHeight - 80) / Math.Max(1, count - 1);
+                    var restingSpacing = Math.Min(cardSpacing, Math.Max(40, availableSpacing));
+                    var separatedSpacing = Math.Min(spreadSpacing, Math.Max(restingSpacing, availableSpacing));
+                    var restingHeight = cardHeight + (count - 1) * restingSpacing;
+                    var separatedHeight = cardHeight + (count - 1) * separatedSpacing;
+                    var restingTop = Math.Max(0, (ActualHeight - restingHeight) / 2 + index * restingSpacing);
+                    var separatedTop = Math.Max(0, (ActualHeight - separatedHeight) / 2 + index * separatedSpacing);
+                    Canvas.SetLeft(container, edge == DockEdge.Right ? ActualWidth - cardWidth : 0);
+                    Canvas.SetTop(container, restingTop);
+                    tab.SetFanLayout(cardWidth, 0, IsPeeking ? separatedTop - restingTop : 0, !_changingEdge);
+                    HoverZone.Width = cardWidth;
+                    HoverZone.Height = separatedHeight + 16;
+                    HoverZone.Margin = new Thickness(edge == DockEdge.Right ? ActualWidth - cardWidth : 0, Math.Max(0, (ActualHeight - separatedHeight) / 2 - 8), 0, 0);
+                }
             }
         }
 
@@ -623,10 +623,17 @@ public partial class DockWindow : Window
         }
 
         _isKeyboardFocused = true;
+        _dismissOnDeactivate = true;
         _keyboardIndex = 0;
         Activate();
         Focus();
         Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(UpdateKeyboardHighlight));
+    }
+
+    private void Window_Deactivated(object? sender, EventArgs e)
+    {
+        if (_dismissOnDeactivate && _isExpanded && !_changingEdge)
+            Collapse();
     }
 
     private void Window_KeyDown(object sender, KeyEventArgs e)

@@ -10,6 +10,7 @@ internal static class AppMenus
     public static ContextMenu TextEditing(TextBox target)
     {
         var menu = new ContextMenu();
+        EnableOverlayDismissal(menu);
         void Add(string label, RoutedUICommand command, string shortcut)
             => menu.Items.Add(new MenuItem { Header = label, Command = command, CommandTarget = target, InputGestureText = shortcut });
         Add("Undo", ApplicationCommands.Undo, "Ctrl+Z");
@@ -27,6 +28,7 @@ internal static class AppMenus
     public static ContextMenu NoteActions(Action delete)
     {
         var menu = new ContextMenu();
+        EnableOverlayDismissal(menu);
         void Add(string label, Action action, bool destructive = false)
         {
             var item = new MenuItem { Header = label, Tag = destructive ? "Destructive" : null };
@@ -40,5 +42,16 @@ internal static class AppMenus
         menu.Items.Add(new Separator());
         Add("Delete note", delete, true);
         return menu;
+    }
+
+    private static void EnableOverlayDismissal(ContextMenu menu)
+    {
+        menu.StaysOpen = false;
+        menu.PreviewKeyDown += (_, e) =>
+        {
+            if (e.Key != Key.Escape) return;
+            menu.IsOpen = false;
+            e.Handled = true;
+        };
     }
 }
