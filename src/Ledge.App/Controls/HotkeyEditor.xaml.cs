@@ -45,13 +45,12 @@ public partial class HotkeyEditor : UserControl
         }
     }
 
-    private void HotkeyTextBox_GotFocus(object sender, RoutedEventArgs e)
+    private void HotkeyTextBox_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         _isListening = true;
         HotkeyTextBox.Text = "Press keys…";
         HotkeyTextBox.Background = (Brush)FindResource("AccentBrush");
         HotkeyTextBox.Foreground = Brushes.White;
-        Keyboard.Focus(HotkeyTextBox);
     }
 
     private void HotkeyTextBox_LostFocus(object sender, RoutedEventArgs e)

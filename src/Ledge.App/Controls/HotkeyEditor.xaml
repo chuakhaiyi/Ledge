@@ -26,7 +26,7 @@
                      IsReadOnly="True"
                      Padding="12,8"
                      PreviewKeyDown="HotkeyTextBox_PreviewKeyDown"
-                     GotFocus="HotkeyTextBox_GotFocus"
+                     PreviewMouseLeftButtonDown="HotkeyTextBox_PreviewMouseLeftButtonDown"
                      LostFocus="HotkeyTextBox_LostFocus"/>
 
             <Button Grid.Column="1"
