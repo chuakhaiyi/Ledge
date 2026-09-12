@@ -25,6 +25,7 @@
     <SolidColorBrush x:Key="SecondaryTextBrush" Color="#62666C"/>
     <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource CopperColor}"/>
     <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource PineColor}"/>
+    <SolidColorBrush x:Key="ScrollbarThumbBrush" Color="#F2F2F2"/>
     <SolidColorBrush x:Key="BorderBrush" Color="#CBC5B9"/>
     <SolidColorBrush x:Key="MenuDividerBrush" Color="#B9B2A6"/>
     <SolidColorBrush x:Key="DestructiveHoverBrush" Color="#F5DFDC"/>

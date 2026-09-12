@@ -35,6 +35,31 @@ public class WindowSmokeTests
                 var persistence = new FilePersistence(Settings.Default, directory);
                 var settings = new SettingsStore(persistence, Settings.Default);
                 using var store = new NoteStore(persistence);
+                var deleted = store.Add("Undo countdown test");
+                store.Delete(deleted);
+                var toast = new ToastNotificationWindow(() => store.UndoRemaining) { Message = "Deleted. 10s to undo." };
+                toast.Show();
+                Pump(100);
+                Assert.Equal(((SolidColorBrush)app.FindResource("AccentBrush")).Color, ((SolidColorBrush)((Border)toast.Content).Background).Color);
+                var toastSurface = (Border)toast.Content;
+                var toastContent = (Grid)toastSurface.Child;
+                var countdown = toastContent.Children.OfType<Border>().Single();
+                Assert.Equal(toastSurface.ActualWidth, countdown.ActualWidth);
+                Assert.Equal(new Thickness(0), countdown.Margin);
+                var outline = Assert.IsType<RectangleGeometry>(toastContent.Clip);
+                Assert.Equal(new Rect(toastContent.RenderSize), outline.Rect);
+                Assert.Equal(toastSurface.CornerRadius.BottomLeft, outline.RadiusX);
+                Assert.Equal(toastSurface.CornerRadius.BottomRight, outline.RadiusY);
+                var initialProgress = toast.CountdownFraction;
+                Pump(200);
+                Assert.True(toast.CountdownFraction < initialProgress);
+                Assert.InRange(Math.Abs(toast.CountdownFraction - store.UndoRemaining.TotalSeconds / 10), 0, 0.05);
+                Capture(toast, "delete-undo-copper");
+                Assert.True(store.UndoDelete());
+                Pump(100);
+                Assert.False(toast.IsVisible);
+                Assert.Equal(0, toast.CountdownFraction);
+                store.Delete(deleted);
                 var note = store.Add("Call the vet\nBook the annual check-up for Friday.", NoteColor.Moss);
                 store.Add("Weekend groceries\nCoffee, tomatoes, sourdough", NoteColor.Butter);
                 store.Add("An idea for later\nKeep the first version small.", NoteColor.Clay);
@@ -200,6 +225,21 @@ public class WindowSmokeTests
                 Assert.False(((Popup)editor.FindName("ColorPopup")).IsOpen);
                 Assert.True(noteWindow.IsVisible);
                 Capture(noteWindow, "note");
+                var originalText = text.Text;
+                text.Text = string.Join("\n", Enumerable.Repeat("A longer note to check the scrollbar.", 40));
+                foreach (var theme in new[] { "Light", "Dark" })
+                {
+                    var resources = new ResourceDictionary { Source = new Uri($"pack://application:,,,/Ledge.App;component/Resources/Colors.{theme}.xaml") };
+                    app.Resources.MergedDictionaries.Add(resources);
+                    Pump(100);
+                    var scrollbar = Descendants<ScrollBar>(text).Single(s => s.IsVisible && s.Orientation == Orientation.Vertical);
+                    Assert.Equal(6, scrollbar.ActualWidth);
+                    var thumb = Descendants<Thumb>(scrollbar).Single();
+                    Assert.Equal(((SolidColorBrush)app.FindResource("ScrollbarThumbBrush")).Color, ((SolidColorBrush)thumb.Background).Color);
+                    Capture(noteWindow, "scrollbar-" + theme);
+                    app.Resources.MergedDictionaries.Remove(resources);
+                }
+                text.Text = originalText;
                 noteWindow.Close();
                 library.UpdateLayout();
                 Assert.Contains(Descendants<TextBlock>(library), t => t.Text == "Last edited");

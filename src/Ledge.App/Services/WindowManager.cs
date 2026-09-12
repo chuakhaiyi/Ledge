@@ -89,7 +89,7 @@ public sealed class WindowManager
         _noteStore!.Delete(note);
         
         // Show undo toast
-        _toastManager?.ShowDeleteToast(note, () =>
+        _toastManager?.ShowDeleteToast(_noteStore, () =>
         {
             _noteStore.UndoDelete();
         });

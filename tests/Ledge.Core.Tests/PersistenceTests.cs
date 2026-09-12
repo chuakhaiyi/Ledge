@@ -7,6 +7,32 @@ using Xunit;
 public class PersistenceTests
 {
     [Fact]
+    public async Task UndoDeadlineExpiresAndRepeatedDeletionRestartsIt()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "Ledge-undo-test-" + Guid.NewGuid());
+        try
+        {
+            using var store = new NoteStore(new FilePersistence(Settings.Default, directory));
+            var first = store.Add("First");
+            var second = store.Add("Second");
+            store.Delete(first);
+            await Task.Delay(100);
+            var remaining = store.UndoRemaining;
+            store.Delete(second);
+            Assert.True(store.UndoRemaining > remaining);
+            Assert.True(store.UndoDelete());
+            Assert.Equal("Second", Assert.Single(store.Notes).Text);
+            Assert.Equal(TimeSpan.Zero, store.UndoRemaining);
+            store.Delete(second);
+            await Task.Delay(store.UndoRemaining + TimeSpan.FromMilliseconds(30));
+            Assert.False(store.UndoDelete());
+            Assert.Equal(TimeSpan.Zero, store.UndoRemaining);
+            Assert.Empty(store.Notes);
+        }
+        finally { if (Directory.Exists(directory)) Directory.Delete(directory, true); }
+    }
+
+    [Fact]
     public async Task SettingsChangesPersistAndConcurrentWritesKeepAValidStore()
     {
         var directory = Path.Combine(Path.GetTempPath(), "Ledge-test-" + Guid.NewGuid());

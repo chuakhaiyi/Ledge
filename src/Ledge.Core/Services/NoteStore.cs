@@ -13,7 +13,20 @@ public sealed class NoteStore : INotifyPropertyChanged, IDisposable
     private readonly FilePersistence _persistence;
     private readonly Timer _saveTimer;
     private Note? _pendingDelete;
-    private Timer? _undoTimer;
+    private long _deleteStarted;
+    public static readonly TimeSpan UndoWindow = TimeSpan.FromSeconds(10);
+
+    public TimeSpan UndoRemaining
+    {
+        get
+        {
+            if (_pendingDelete == null) return TimeSpan.Zero;
+            var remaining = UndoWindow - System.Diagnostics.Stopwatch.GetElapsedTime(_deleteStarted);
+            if (remaining > TimeSpan.Zero) return remaining;
+            _pendingDelete = null;
+            return TimeSpan.Zero;
+        }
+    }
     // ponytail: one save lock; use an async queue if large stores stall editing.
     private readonly object _saveLock = new();
     private Note[] _saveSnapshot = [];
@@ -89,30 +102,23 @@ public sealed class NoteStore : INotifyPropertyChanged, IDisposable
 
     public void Delete(Note note)
     {
-        _undoTimer?.Dispose();
         _pendingDelete = _notes.FirstOrDefault(n => n.Id == note.Id);
         if (_pendingDelete == null) return;
+        _deleteStarted = System.Diagnostics.Stopwatch.GetTimestamp();
         _notes.Remove(_pendingDelete);
         NoteDeleted?.Invoke(note);
         ScheduleSave();
 
-        _undoTimer = new Timer(_ =>
-        {
-            _pendingDelete = null;
-            _undoTimer?.Dispose();
-            _undoTimer = null;
-        }, null, TimeSpan.FromSeconds(10), Timeout.InfiniteTimeSpan);
     }
 
     public bool UndoDelete()
     {
-        if (_pendingDelete is null) return false;
+        if (UndoRemaining == TimeSpan.Zero) return false;
 
-        _notes.Insert(0, _pendingDelete);
-        NoteRestored?.Invoke(_pendingDelete);
+        var restored = _pendingDelete!;
         _pendingDelete = null;
-        _undoTimer?.Dispose();
-        _undoTimer = null;
+        _notes.Insert(0, restored);
+        NoteRestored?.Invoke(restored);
         ScheduleSave();
         return true;
     }
@@ -173,7 +179,7 @@ public sealed class NoteStore : INotifyPropertyChanged, IDisposable
         {
             _disposed = true;
             _saveTimer.Dispose();
-            _undoTimer?.Dispose();
+            _pendingDelete = null;
             _notes.CollectionChanged -= OnCollectionChanged;
         }
     }

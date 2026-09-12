@@ -6,37 +6,28 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
-using System.Windows.Threading;
-using Ledge.Core.Models;
+using Ledge.Core.Services;
 
 public sealed class ToastManager
 {
-    private readonly DispatcherTimer _autoHideTimer;
     private ToastNotificationWindow? _currentToast;
 
-    public ToastManager()
-    {
-        _autoHideTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(10) };
-        _autoHideTimer.Tick += (_, _) => HideCurrentToast();
-    }
-
-    public void ShowDeleteToast(Note note, Action onUndo)
+    public void ShowDeleteToast(NoteStore store, Action onUndo)
     {
         Application.Current?.Dispatcher.Invoke(() =>
         {
             HideCurrentToast();
 
-            _currentToast = new ToastNotificationWindow
+            if (store.UndoRemaining == TimeSpan.Zero) return;
+            var toast = new ToastNotificationWindow(() => store.UndoRemaining)
             {
                 Message = "Deleted. 10s to undo.",
                 Owner = Application.Current.MainWindow
             };
-            _currentToast.UndoRequested += () => onUndo();
-            _currentToast.Show();
-            _currentToast.Activate();
-
-            _autoHideTimer.Stop();
-            _autoHideTimer.Start();
+            _currentToast = toast;
+            toast.UndoRequested += onUndo;
+            toast.Closed += (_, _) => { if (ReferenceEquals(_currentToast, toast)) _currentToast = null; };
+            toast.Show();
         });
     }
 
@@ -46,10 +37,8 @@ public sealed class ToastManager
         {
             if (_currentToast != null)
             {
-                _currentToast.UndoRequested -= null;
                 _currentToast.Close();
                 _currentToast = null;
-                _autoHideTimer.Stop();
             }
         });
     }
@@ -57,6 +46,11 @@ public sealed class ToastManager
 
 public sealed class ToastNotificationWindow : Window
 {
+    private readonly Func<TimeSpan> _remaining;
+    private readonly ScaleTransform _countdown = new(1, 1);
+
+    public double CountdownFraction => _countdown.ScaleX;
+
     public static readonly DependencyProperty MessageProperty =
         DependencyProperty.Register(nameof(Message), typeof(string), typeof(ToastNotificationWindow),
             new PropertyMetadata(""));
@@ -69,21 +63,21 @@ public sealed class ToastNotificationWindow : Window
 
     public event Action? UndoRequested;
 
-    public ToastNotificationWindow()
+    public ToastNotificationWindow(Func<TimeSpan> remaining)
     {
+        _remaining = remaining;
         WindowStyle = WindowStyle.None;
         AllowsTransparency = true;
         Background = Brushes.Transparent;
         ShowInTaskbar = false;
+        ShowActivated = false;
         Topmost = true;
         SizeToContent = SizeToContent.WidthAndHeight;
         WindowStartupLocation = WindowStartupLocation.Manual;
 
         var border = new Border
         {
-            Background = (Brush)FindResource("SuccessBrush"),
             CornerRadius = new CornerRadius(8),
-            Padding = new Thickness(16, 12, 16, 12),
             MinWidth = 280,
             MaxWidth = 400,
             Effect = (System.Windows.Media.Effects.Effect)FindResource("ShadowEffect"),
@@ -91,8 +85,9 @@ public sealed class ToastNotificationWindow : Window
             VerticalAlignment = VerticalAlignment.Bottom,
             Margin = new Thickness(0, 0, 0, 24)
         };
+        border.SetResourceReference(Border.BackgroundProperty, "AccentBrush");
 
-        var grid = new Grid();
+        var grid = new Grid { Margin = new Thickness(16, 12, 16, 12) };
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -124,12 +119,29 @@ public sealed class ToastNotificationWindow : Window
 
         grid.Children.Add(messageText);
         grid.Children.Add(undoButton);
-        border.Child = grid;
+        var content = new Grid();
+        // Clip in the container's coordinates so depletion never scales its corners.
+        content.SizeChanged += (_, _) => content.Clip = new RectangleGeometry(
+            new Rect(content.RenderSize), border.CornerRadius.BottomLeft, border.CornerRadius.BottomRight);
+        content.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        content.RowDefinitions.Add(new RowDefinition { Height = new GridLength(3) });
+        content.Children.Add(grid);
+        var progress = new Border
+        {
+            Name = "UndoCountdown", Background = Brushes.White, Opacity = 0.8,
+            RenderTransform = _countdown
+        };
+        System.Windows.Automation.AutomationProperties.SetName(progress, "Time remaining to undo deletion");
+        Grid.SetRow(progress, 1);
+        content.Children.Add(progress);
+        border.Child = content;
 
         Content = border;
 
         Loaded += (_, _) =>
         {
+            CompositionTarget.Rendering += UpdateCountdown;
+            UpdateCountdown(null, EventArgs.Empty);
             // Position at bottom center of screen
             var screen = SystemParameters.WorkArea;
             Left = screen.Left + (screen.Width - ActualWidth) / 2;
@@ -149,8 +161,15 @@ public sealed class ToastNotificationWindow : Window
         };
     }
 
+    private void UpdateCountdown(object? sender, EventArgs e)
+    {
+        _countdown.ScaleX = Math.Clamp(_remaining().TotalSeconds / NoteStore.UndoWindow.TotalSeconds, 0, 1);
+        if (_countdown.ScaleX == 0) Close();
+    }
+
     protected override void OnClosed(EventArgs e)
     {
+        CompositionTarget.Rendering -= UpdateCountdown;
         base.OnClosed(e);
         UndoRequested = null;
     }
