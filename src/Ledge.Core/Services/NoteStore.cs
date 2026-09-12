@@ -63,6 +63,14 @@ public sealed class NoteStore : INotifyPropertyChanged, IDisposable
 
     public Note Add(string text = "", NoteColor color = NoteColor.Moss)
     {
+        var note = Note.Create(text, color.ToString());
+        _notes.Insert(0, note);
+        ScheduleSave();
+        return note;
+    }
+
+    public Note Add(string text, string color)
+    {
         var note = Note.Create(text, color);
         _notes.Insert(0, note);
         ScheduleSave();
@@ -113,7 +121,8 @@ public sealed class NoteStore : INotifyPropertyChanged, IDisposable
     public void Unarchive(Note note) => Update(note with { Archived = false });
     public void Pin(Note note) => Update(note with { Pinned = true });
     public void Unpin(Note note) => Update(note with { Pinned = false });
-    public void SetColor(Note note, NoteColor color) => Update(note with { Color = color });
+    public void SetColor(Note note, string color)
+        => Update(note with { Color = NoteColorExtensions.IsPresetName(color) ? color : nameof(NoteColor.Moss) });
     public void SetText(Note note, string text) => Update(note with { Text = text });
     public void SetPosition(Note note, NotePosition position) => Update(note with { Position = position });
 

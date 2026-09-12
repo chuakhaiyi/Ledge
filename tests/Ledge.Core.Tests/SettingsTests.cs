@@ -14,6 +14,13 @@ public class SettingsTests
     }
 
     [Fact]
+    public void DockMonitorId_is_optional_so_primary_fallback_can_be_runtime_only()
+    {
+        var settings = Settings.Default;
+        settings.DockMonitorId.Should().BeNull();
+    }
+
+    [Fact]
     public void DefaultSettings_Has_RightEdge()
     {
         var settings = Settings.Default;

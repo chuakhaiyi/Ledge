@@ -184,13 +184,13 @@ public class WindowSmokeTests
                     var popup = (Popup)editor.FindName("ColorPopup");
                     popup.Child.UpdateLayout();
                     if (color == NoteColor.Butter) Capture((FrameworkElement)popup.Child, "color-palette");
-                    var swatch = Descendants<Button>(popup.Child).Single(b => b.DataContext is ColorChip chip && chip.Color == color);
+                    var swatch = Descendants<Button>(popup.Child).Single(b => b.DataContext is ColorChip chip && chip.Color == color.ToString());
                     swatch.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                     Assert.False(popup.IsOpen);
-                    Assert.Equal(color, store.Notes.Single(n => n.Id == note.Id).Color);
-                    Assert.Equal(color, editor.Note!.Color);
+                    Assert.Equal(color.ToString(), store.Notes.Single(n => n.Id == note.Id).Color);
+                    Assert.Equal(color.ToString(), editor.Note!.Color);
                     dock.UpdateLayout();
-                    Assert.All(Descendants<DockTab>(dock).Where(t => t.Note?.Id == note.Id), t => Assert.Equal(color, t.Note!.Color));
+                    Assert.All(Descendants<DockTab>(dock).Where(t => t.Note?.Id == note.Id), t => Assert.Equal(color.ToString(), t.Note!.Color));
                     Assert.Equal((Color)ColorConverter.ConvertFromString(color.ToHex()), ((LinearGradientBrush)((Border)editor.FindName("NoteSurface")).Background).GradientStops.Last().Color);
                 }
                 ((Button)editor.FindName("ColorButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));

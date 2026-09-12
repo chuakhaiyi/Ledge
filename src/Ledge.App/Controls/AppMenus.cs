@@ -11,6 +11,8 @@ internal static class AppMenus
     {
         var menu = new ContextMenu();
         EnableOverlayDismissal(menu);
+        target.PreviewMouseRightButtonDown += (_, e) => SelectSpellingWord(target, e.GetPosition(target));
+        target.ContextMenuOpening += (_, args) => AddSpellingItems(menu, target);
         void Add(string label, RoutedUICommand command, string shortcut)
             => menu.Items.Add(new MenuItem { Header = label, Command = command, CommandTarget = target, InputGestureText = shortcut });
         Add("Undo", ApplicationCommands.Undo, "Ctrl+Z");
@@ -23,6 +25,46 @@ internal static class AppMenus
         menu.Items.Add(new Separator());
         Add("Select all", ApplicationCommands.SelectAll, "Ctrl+A");
         return menu;
+    }
+
+    private static void AddSpellingItems(ContextMenu menu, TextBox target)
+    {
+        foreach (var item in menu.Items.OfType<MenuItem>().Where(item => item.Tag as string == "Spelling").ToList())
+            menu.Items.Remove(item);
+        foreach (var separator in menu.Items.OfType<Separator>().Where(separator => separator.Tag as string == "Spelling").ToList())
+            menu.Items.Remove(separator);
+
+        var index = target.CaretIndex;
+        if (index < 0 || index >= target.Text.Length) return;
+        var error = target.GetSpellingError(index);
+        if (error == null) return;
+
+        target.Select(target.GetSpellingErrorStart(index), target.GetSpellingErrorLength(index));
+        var suggestions = error.Suggestions.Take(3).ToList();
+        var insertAt = 0;
+        foreach (var suggestion in suggestions)
+        {
+            var item = new MenuItem { Header = suggestion, Tag = "Spelling" };
+            item.Click += (_, _) => error.Correct(suggestion);
+            menu.Items.Insert(insertAt++, item);
+        }
+
+        var ignore = new MenuItem { Header = "Ignore", Tag = "Spelling" };
+        ignore.Click += (_, _) => error.IgnoreAll();
+        menu.Items.Insert(insertAt++, ignore);
+        menu.Items.Insert(insertAt, new Separator { Tag = "Spelling" });
+    }
+
+    private static void SelectSpellingWord(TextBox target, Point point)
+    {
+        var index = target.GetCharacterIndexFromPoint(point, true);
+        if (index >= 0 && index < target.Text.Length)
+        {
+            target.CaretIndex = index;
+            var error = target.GetSpellingError(index);
+            if (error != null)
+                target.Select(target.GetSpellingErrorStart(index), target.GetSpellingErrorLength(index));
+        }
     }
 
     public static ContextMenu NoteActions(Action delete)

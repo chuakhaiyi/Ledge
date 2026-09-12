@@ -229,6 +229,29 @@
     </Style>
 
     <!-- ScrollViewer -->
+    <Style TargetType="ScrollBar">
+        <Setter Property="Width" Value="8"/>
+        <Setter Property="Height" Value="8"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ScrollBar">
+            <Grid Background="Transparent">
+                <Track x:Name="PART_Track" IsDirectionReversed="False">
+                    <Track.Thumb><Thumb Background="{DynamicResource BorderBrush}" Opacity="0.78" Margin="1">
+                        <Thumb.Template><ControlTemplate TargetType="Thumb"><Border Background="{TemplateBinding Background}" CornerRadius="4"/></ControlTemplate></Thumb.Template>
+                    </Thumb></Track.Thumb>
+                </Track>
+            </Grid>
+            <ControlTemplate.Triggers>
+                <Trigger Property="Orientation" Value="Vertical">
+                    <Setter TargetName="PART_Track" Property="IsDirectionReversed" Value="True"/>
+                </Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate></Setter.Value></Setter>
+        <Style.Triggers>
+            <Trigger Property="Orientation" Value="Horizontal"><Setter Property="Height" Value="8"/><Setter Property="Width" Value="Auto"/></Trigger>
+            <Trigger Property="Orientation" Value="Vertical"><Setter Property="Width" Value="8"/><Setter Property="Height" Value="Auto"/></Trigger>
+        </Style.Triggers>
+    </Style>
     <Style x:Key="ThinScrollViewer" TargetType="ScrollViewer">
         <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
         <Setter Property="HorizontalScrollBarVisibility" Value="Disabled"/>

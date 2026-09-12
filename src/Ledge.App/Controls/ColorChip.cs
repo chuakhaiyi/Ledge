@@ -8,7 +8,7 @@ public sealed class ColorChip : INotifyPropertyChanged
 {
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    public NoteColor Color { get; }
+    public string Color { get; }
     public string ColorName { get; }
     public string ColorBrush { get; }
 
@@ -19,10 +19,12 @@ public sealed class ColorChip : INotifyPropertyChanged
         set { _isSelected = value; OnPropertyChanged(); }
     }
 
-    public ColorChip(NoteColor color)
+    public ColorChip(NoteColor color) : this(color.ToString()) { }
+
+    public ColorChip(string color)
     {
         Color = color;
-        ColorName = color.ToString();
+        ColorName = color.DisplayName();
         ColorBrush = color.ToHex();
     }
 

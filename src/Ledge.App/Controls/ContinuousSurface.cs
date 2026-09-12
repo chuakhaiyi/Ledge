@@ -67,7 +67,7 @@ public class ContinuousSurface : Border
         return result;
     }
 
-    public static Brush NoteFill(NoteColor color)
+    public static Brush NoteFill(string? color)
     {
         var basis = (Color)ColorConverter.ConvertFromString(color.ToHex());
         var highlight = Color.FromRgb((byte)(basis.R + (255 - basis.R) * .22), (byte)(basis.G + (255 - basis.G) * .22), (byte)(basis.B + (255 - basis.B) * .22));

@@ -104,6 +104,8 @@ public record HotkeyBinding(int Modifiers, int Key)
 public record Settings
 {
     public DockEdge DockEdge { get; set; } = DockEdge.Right;
+    // DeviceName is stable across reconnects; an unavailable display falls back at runtime.
+    public string? DockMonitorId { get; set; }
     public AppTheme Theme { get; set; } = AppTheme.System;
     public bool StartWithWindows { get; set; } = false;
     public bool PortableMode { get; set; } = false;

@@ -76,8 +76,19 @@ public sealed class FilePersistence
             catch { }
         }
 
-        return new StoreData { Notes = NormalizeNoteIds(notes), Settings = settings };
+        return new StoreData { Notes = NormalizeNotes(notes), Settings = settings };
     }
+
+    private static List<Note> NormalizeNotes(IEnumerable<Note> notes)
+        => NormalizeNoteIds(notes).Select(note =>
+        {
+            var normalized = NoteColorExtensions.IsPresetName(note.Color)
+                ? note with { Color = NoteColorExtensions.Presets.First(p => p.Name.Equals(note.Color, StringComparison.OrdinalIgnoreCase)).Name }
+                : note with { Color = nameof(NoteColor.Moss) };
+            return normalized.Position is { } position && (position.Width <= 0 || position.Height <= 0)
+                ? normalized with { Position = new NotePosition(position.X, position.Y, NotePosition.Default.Width, NotePosition.Default.Height) }
+                : normalized;
+        }).ToList();
 
     private static List<Note> NormalizeNoteIds(IEnumerable<Note> notes)
     {
@@ -107,7 +118,7 @@ public sealed class FilePersistence
     {
         var data = new StoreData
         {
-            Version = 1,
+            Version = 2,
             Notes = notes.ToList()
         };
 
@@ -152,7 +163,7 @@ public sealed class FilePersistence
 
 public sealed class StoreData
 {
-    public int Version { get; set; } = 1;
+    public int Version { get; set; } = 2;
     public List<Note> Notes { get; set; } = [];
     public Settings Settings { get; set; } = Settings.Default;
 }

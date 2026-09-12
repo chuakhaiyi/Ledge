@@ -36,6 +36,7 @@ public partial class DockWindow : Window
     private bool _changingEdge;
     private bool _closed;
     private bool _bindingsInitialized;
+    private string? _activeMonitorId;
 
     public static readonly DependencyProperty PinnedNotesProperty =
         DependencyProperty.Register(nameof(PinnedNotes), typeof(System.Collections.IEnumerable), typeof(DockWindow),
@@ -143,7 +144,7 @@ public partial class DockWindow : Window
 
     private void OnSettingsChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(SettingsStore.DockEdge)) Dispatcher.Invoke(ChangeEdge);
+        if (e.PropertyName == nameof(SettingsStore.DockEdge) || e.PropertyName == nameof(SettingsStore.DockMonitorId)) Dispatcher.Invoke(ChangeEdge);
         else if (e.PropertyName == nameof(SettingsStore.ShowDockOnHover))
             Dispatcher.Invoke(() => { Collapse(); UpdateBindings(); Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(PositionCollapsedItems)); });
     }
@@ -226,7 +227,7 @@ public partial class DockWindow : Window
 
         try
         {
-            while (!_closed && CurrentDockEdge != _settingsStore.DockEdge)
+            while (!_closed && (CurrentDockEdge != _settingsStore.DockEdge || _activeMonitorId != MonitorCatalog.Resolve(_settingsStore.DockMonitorId).Id))
             {
                 if (IsLoaded && IsVisible) await Phase(true);
                 if (_closed) return;
@@ -287,31 +288,37 @@ public partial class DockWindow : Window
 
     private void PlaceDock()
     {
-        var screen = SystemParameters.WorkArea;
+        var monitor = MonitorCatalog.Resolve(_settingsStore.DockMonitorId);
+        _activeMonitorId = monitor.Id;
         var edge = _settingsStore.DockEdge;
+        var dpi = Math.Max(96, User32.GetDpiForSystem()) / 96.0;
+        var left = monitor.Left / dpi;
+        var top = monitor.Top / dpi;
+        var width = monitor.Width / dpi;
+        var height = monitor.Height / dpi;
 
         if (edge == DockEdge.Top)
         {
-            var topWidth = Math.Min(620, Math.Max(400, screen.Width - 100));
+            var topWidth = Math.Min(620, Math.Max(400, width - 100));
             Width = topWidth;
             Height = 320;
-            Left = screen.Left + (screen.Width - topWidth) / 2;
-            Top = screen.Top;
+            Left = left + (width - topWidth) / 2;
+            Top = top;
         }
         else if (edge == DockEdge.Left)
         {
             Width = 280;
-            Height = screen.Height;
-            Left = screen.Left;
-            Top = screen.Top;
+            Height = height;
+            Left = left;
+            Top = top;
         }
         else // DockEdge.Right
         {
-            var width = 280;
-            Width = width;
-            Height = screen.Height;
-            Left = screen.Right - width;
-            Top = screen.Top;
+            const double dockWidth = 280;
+            Width = dockWidth;
+            Height = height;
+            Left = left + width - dockWidth;
+            Top = top;
         }
     }
 
@@ -320,7 +327,10 @@ public partial class DockWindow : Window
         var edge = _settingsStore.DockEdge;
         CurrentDockEdge = edge;
         ExpandedView.VerticalAlignment = edge == DockEdge.Top ? VerticalAlignment.Top : VerticalAlignment.Center;
-        ExpandedView.MaxHeight = edge == DockEdge.Top ? 300 : Math.Max(100, SystemParameters.WorkArea.Height - 40);
+        var monitor = MonitorCatalog.Resolve(_settingsStore.DockMonitorId);
+        var dpi = Math.Max(96, User32.GetDpiForSystem()) / 96.0;
+        var monitorHeight = monitor.Height / dpi;
+        ExpandedView.MaxHeight = edge == DockEdge.Top ? 300 : Math.Max(100, monitorHeight - 40);
         if (edge == DockEdge.Top)
         {
             Height = 320;
@@ -337,7 +347,7 @@ public partial class DockWindow : Window
         }
         else if (edge == DockEdge.Left)
         {
-            Height = SystemParameters.WorkArea.Height;
+            Height = monitorHeight;
             CollapsedEmptyMark.Width = 20;
             CollapsedEmptyMark.Height = 52;
             CollapsedTabs.HorizontalAlignment = HorizontalAlignment.Left;
@@ -351,7 +361,7 @@ public partial class DockWindow : Window
         }
         else // Right
         {
-            Height = SystemParameters.WorkArea.Height;
+            Height = monitorHeight;
             CollapsedEmptyMark.Width = 20;
             CollapsedEmptyMark.Height = 52;
             CollapsedTabs.HorizontalAlignment = HorizontalAlignment.Right;

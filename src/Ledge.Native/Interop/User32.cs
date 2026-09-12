@@ -148,6 +148,9 @@ public static class User32
     [DllImport("user32.dll", SetLastError = true)]
     public static extern bool GetMonitorInfo(nint hMonitor, ref MONITORINFO lpmi);
 
+    [DllImport("user32.dll")]
+    public static extern uint GetDpiForSystem();
+
     [DllImport("user32.dll", SetLastError = true)]
     public static extern bool RegisterHotKey(nint hWnd, int id, int fsModifiers, int vk);
 

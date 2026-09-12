@@ -73,4 +73,21 @@ public class PersistenceTests
             if (Directory.Exists(directory)) Directory.Delete(directory, true);
         }
     }
+
+    [Fact]
+    public async Task LoadFillsMissingLegacyPositionDimensions()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "Ledge-position-test-" + Guid.NewGuid());
+        Directory.CreateDirectory(directory);
+        try
+        {
+            await File.WriteAllTextAsync(Path.Combine(directory, "store.json"), """
+            { "version": 1, "notes": [{ "id": "old", "text": "Legacy", "position": { "x": 12, "y": 20 } }], "settings": {} }
+            """);
+            var loaded = await new FilePersistence(Settings.Default, directory).LoadAsync();
+            Assert.Equal(NotePosition.Default.Width, Assert.Single(loaded.Notes).Position!.Width);
+            Assert.Equal(12, loaded.Notes[0].Position!.X);
+        }
+        finally { Directory.Delete(directory, true); }
+    }
 }

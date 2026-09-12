@@ -44,6 +44,13 @@
                                   Style="{StaticResource SettingsComboBox}"/>
                     </StackPanel>
 
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                        <TextBlock Text="Monitor:" Style="{StaticResource UIText}" VerticalAlignment="Center" Width="130"/>
+                        <ComboBox x:Name="MonitorComboBox" DisplayMemberPath="Label" SelectedValuePath="Id"
+                                  SelectionChanged="MonitorComboBox_SelectionChanged"
+                                  Width="250" Style="{StaticResource SettingsComboBox}"/>
+                    </StackPanel>
+
                     <Button Content="Open data folder"
                             Style="{StaticResource IconButton}"
                             HorizontalAlignment="Left"

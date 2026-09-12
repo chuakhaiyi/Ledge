@@ -14,4 +14,12 @@ public class NoteColorTests
     {
         color.ToForegroundHex().Should().Be(expected);
     }
+
+    [Fact]
+    public void Custom_hex_colors_resolve_without_becoming_a_palette_token()
+    {
+        "#112233".ToHex().Should().Be("#112233");
+        "#112233".DisplayName().Should().Be("Custom");
+        NoteColorExtensions.Presets.Should().HaveCount(16);
+    }
 }

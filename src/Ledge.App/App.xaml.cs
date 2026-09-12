@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Ledge.App.Services;
 using Ledge.Core.Services;
 using Ledge.Core.Models;
+using System.Diagnostics;
 
 public partial class App : Application
 {
@@ -35,6 +36,7 @@ public partial class App : Application
 
     private async void Application_Startup(object sender, StartupEventArgs e)
     {
+        var startupClock = Stopwatch.StartNew();
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
         _persistence = new FilePersistence(Settings.Default);
@@ -44,9 +46,17 @@ public partial class App : Application
         var startupOption = e.Args.FirstOrDefault(a => a.StartsWith("--configure-startup="));
         if (startupOption != null)
         {
-            _settingsStore.StartWithWindows = startupOption == "--configure-startup=true";
-            await _settingsStore.SaveAsync();
-            Shutdown();
+            try
+            {
+                _settingsStore.StartWithWindows = startupOption == "--configure-startup=true";
+                await _settingsStore.SaveAsync();
+                Environment.Exit(0);
+            }
+            catch (Exception exception)
+            {
+                Trace.TraceError("Startup configuration failed: {0}", exception);
+                Environment.Exit(1);
+            }
             return;
         }
 
@@ -57,7 +67,7 @@ public partial class App : Application
             { using (existingEvent) existingEvent.Set(); }
             // A second launch must not flush its older settings over the running app.
             _settingsStore = null;
-            Shutdown();
+            Environment.Exit(0);
             return;
         }
         _showLibraryEvent = new EventWaitHandle(false, EventResetMode.AutoReset, "Local\\Ledge.ShowLibrary");
@@ -87,6 +97,7 @@ public partial class App : Application
         _settingsStore.ApplyStartupSettings();
         _windowManager.ShowDock();
         if (!e.Args.Contains("--background") || _openLibraryRequested) _windowManager.ShowLibrary();
+        Trace.WriteLine($"Ledge startup ready in {startupClock.ElapsedMilliseconds} ms");
     }
 
     private void Application_Exit(object sender, ExitEventArgs e)

@@ -419,7 +419,7 @@ public sealed class NoteRow : INotifyPropertyChanged
 
     public Note Note { get; private set; }
     public string PreviewText => Note.Text.Split('\n')[0].TrimEnd('\r');
-    public string MetaText => $"{Note.Color} · {GetRelativeTime(Note.ModifiedAt)}";
+    public string MetaText => $"{Note.Color.DisplayName()} · {GetRelativeTime(Note.ModifiedAt)}";
     public string ColorBrush => Note.Color.ToHex();
 
     public NoteRow(Note note)

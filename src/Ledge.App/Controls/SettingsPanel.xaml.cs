@@ -4,10 +4,12 @@ using System.Windows;
 using System.Windows.Controls;
 using Ledge.Core.Services;
 using Ledge.Core.Models;
+using Ledge.App.Services;
 
 public partial class SettingsPanel : UserControl
 {
     private readonly SettingsStore _settingsStore;
+    private bool _loadingMonitors;
 
     public SettingsPanel(SettingsStore settingsStore)
     {
@@ -19,6 +21,18 @@ public partial class SettingsPanel : UserControl
     private void Panel_Loaded(object sender, RoutedEventArgs e)
     {
         DataPathText.Text = _settingsStore.DataPath;
+        _loadingMonitors = true;
+        var monitors = MonitorCatalog.GetAvailable();
+        MonitorComboBox.ItemsSource = monitors;
+        MonitorComboBox.SelectedItem = monitors.FirstOrDefault(m => string.Equals(m.Id, _settingsStore.DockMonitorId, StringComparison.OrdinalIgnoreCase))
+            ?? monitors.FirstOrDefault(m => m.IsPrimary);
+        _loadingMonitors = false;
+    }
+
+    private void MonitorComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!_loadingMonitors && MonitorComboBox.SelectedItem is DockMonitor monitor)
+            _settingsStore.DockMonitorId = monitor.Id;
     }
 
     private void OpenDataFolder_Click(object sender, RoutedEventArgs e)
@@ -45,6 +59,7 @@ public partial class SettingsPanel : UserControl
         if (result == MessageBoxResult.Yes)
         {
             _settingsStore.DockEdge = DockEdge.Right;
+            _settingsStore.DockMonitorId = null;
             _settingsStore.Theme = AppTheme.System;
             _settingsStore.ShowDockOnHover = true;
             _settingsStore.StartWithWindows = false;

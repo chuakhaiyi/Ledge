@@ -23,6 +23,12 @@ public sealed class SettingsStore : INotifyPropertyChanged
         set => Set(value);
     }
 
+    public string? DockMonitorId
+    {
+        get => _settings.DockMonitorId;
+        set => Set(value);
+    }
+
     public AppTheme Theme
     {
         get => _settings.Theme;
@@ -93,7 +99,9 @@ public sealed class SettingsStore : INotifyPropertyChanged
     {
         try
         {
-            using var key = Registry.CurrentUser.OpenSubKey(RunKeyPath, true);
+            using var key = enable
+                ? Registry.CurrentUser.CreateSubKey(RunKeyPath, true)
+                : Registry.CurrentUser.OpenSubKey(RunKeyPath, true);
             if (key == null) return;
 
             if (enable)

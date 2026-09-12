@@ -20,7 +20,7 @@ public partial class NoteEditor : UserControl
     }
 
     public event Action<string>? TextChanged;
-    public event Action<NoteColor>? ColorChanged;
+    public event Action<string>? ColorChanged;
     public event Action? DeleteRequested;
     public event Action? PinToggled;
     public event Action? CloseRequested;
@@ -30,17 +30,7 @@ public partial class NoteEditor : UserControl
 
     public NoteEditor()
     {
-        _colorChips =
-        [
-            new ColorChip(NoteColor.Butter),
-            new ColorChip(NoteColor.Clay),
-            new ColorChip(NoteColor.Moss),
-            new ColorChip(NoteColor.Sky),
-            new ColorChip(NoteColor.Blush),
-            new ColorChip(NoteColor.Slate),
-            new ColorChip(NoteColor.Sand),
-            new ColorChip(NoteColor.Ink)
-        ];
+        _colorChips = NoteColorExtensions.Presets.Select(choice => new ColorChip(choice.Name)).ToArray();
 
         InitializeComponent();
         TextBox.ContextMenu = AppMenus.TextEditing(TextBox);
@@ -132,7 +122,7 @@ public partial class NoteEditor : UserControl
         DeleteRequested?.Invoke();
     }
 
-    public void UpdateColorIndicator(NoteColor color)
+    public void UpdateColorIndicator(string color)
     {
         NoteSurface.Background = ContinuousSurface.NoteFill(color);
         ColorIndicator.Fill = new SolidColorBrush((Color)ColorConverter.ConvertFromString(color.ToHex()));
@@ -141,11 +131,11 @@ public partial class NoteEditor : UserControl
         TextBox.CaretBrush = foreground;
     }
 
-    private void UpdateColorSelection(NoteColor color)
+    private void UpdateColorSelection(string color)
     {
         foreach (var chip in _colorChips)
         {
-            chip.IsSelected = chip.Color == color;
+            chip.IsSelected = string.Equals(chip.Color, color, StringComparison.OrdinalIgnoreCase);
         }
     }
 

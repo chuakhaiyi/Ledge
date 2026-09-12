@@ -3,6 +3,7 @@
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
  <Grid>
   <TextBox x:Name="SearchTextBox" Style="{StaticResource SearchBox}" Padding="36,10,12,10"
+           SpellCheck.IsEnabled="True"
            TextAlignment="Left" HorizontalContentAlignment="Left" VerticalContentAlignment="Center"
            AutomationProperties.Name="Search notes" TextChanged="SearchTextBox_TextChanged"/>
   <Path Data="M11,6 A5,5 0 1 1 1,6 A5,5 0 1 1 11,6 M10,10 L15,15"

@@ -239,7 +239,7 @@ public partial class NoteWindow : Window
         }
     }
 
-    private void Editor_ColorChanged(NoteColor color)
+    private void Editor_ColorChanged(string color)
     {
         if (Note != null)
         {
