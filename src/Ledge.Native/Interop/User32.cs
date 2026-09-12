@@ -1,6 +1,7 @@
 namespace Ledge.Native.Interop;
 
 using System.Runtime.InteropServices;
+using System.Text;
 
 public static class User32
 {
@@ -159,6 +160,9 @@ public static class User32
 
     [DllImport("user32.dll", SetLastError = true)]
     public static extern nint GetForegroundWindow();
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    public static extern int GetClassName(nint hWnd, StringBuilder lpClassName, int nMaxCount);
 
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
     public static extern nint GetModuleHandle(string? lpModuleName);

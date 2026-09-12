@@ -274,7 +274,9 @@ public partial class DockWindow : Window
     private void SetWindowStyle(nint hwnd)
     {
         var exStyle = User32.GetWindowLongPtr(hwnd, User32.GWL_EXSTYLE);
-        exStyle |= User32.WS_EX_TOOLWINDOW | User32.WS_EX_TOPMOST;
+        // The dock is a hover surface, never a foreground app window. This also
+        // prevents the shell from treating the edge window as a fullscreen app.
+        exStyle |= User32.WS_EX_TOOLWINDOW | User32.WS_EX_TOPMOST | User32.WS_EX_NOACTIVATE;
         User32.SetWindowLongPtr(hwnd, User32.GWL_EXSTYLE, exStyle);
 
         var margins = new DwmApi.MARGINS { cxLeftWidth = -1, cxRightWidth = -1, cyTopHeight = -1, cyBottomHeight = -1 };
@@ -296,6 +298,7 @@ public partial class DockWindow : Window
         var top = monitor.Top / dpi;
         var width = monitor.Width / dpi;
         var height = monitor.Height / dpi;
+        var edgeInset = 1 / dpi;
 
         if (edge == DockEdge.Top)
         {
@@ -308,17 +311,17 @@ public partial class DockWindow : Window
         else if (edge == DockEdge.Left)
         {
             Width = 280;
-            Height = height;
+            Height = Math.Max(100, height - edgeInset * 2);
             Left = left;
-            Top = top;
+            Top = top + edgeInset;
         }
         else // DockEdge.Right
         {
             const double dockWidth = 280;
             Width = dockWidth;
-            Height = height;
+            Height = Math.Max(100, height - edgeInset * 2);
             Left = left + width - dockWidth;
-            Top = top;
+            Top = top + edgeInset;
         }
     }
 
@@ -330,7 +333,9 @@ public partial class DockWindow : Window
         var monitor = MonitorCatalog.Resolve(_settingsStore.DockMonitorId);
         var dpi = Math.Max(96, User32.GetDpiForSystem()) / 96.0;
         var monitorHeight = monitor.Height / dpi;
-        ExpandedView.MaxHeight = edge == DockEdge.Top ? 300 : Math.Max(100, monitorHeight - 40);
+        var edgeInset = 1 / dpi;
+        var dockHeight = Math.Max(100, monitorHeight - edgeInset * 2);
+        ExpandedView.MaxHeight = edge == DockEdge.Top ? 300 : Math.Max(100, dockHeight - 40);
         if (edge == DockEdge.Top)
         {
             Height = 320;
@@ -347,7 +352,7 @@ public partial class DockWindow : Window
         }
         else if (edge == DockEdge.Left)
         {
-            Height = monitorHeight;
+            Height = dockHeight;
             CollapsedEmptyMark.Width = 20;
             CollapsedEmptyMark.Height = 52;
             CollapsedTabs.HorizontalAlignment = HorizontalAlignment.Left;
@@ -361,7 +366,7 @@ public partial class DockWindow : Window
         }
         else // Right
         {
-            Height = monitorHeight;
+            Height = dockHeight;
             CollapsedEmptyMark.Width = 20;
             CollapsedEmptyMark.Height = 52;
             CollapsedTabs.HorizontalAlignment = HorizontalAlignment.Right;

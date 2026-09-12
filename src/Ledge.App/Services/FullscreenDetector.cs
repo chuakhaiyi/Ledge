@@ -2,6 +2,7 @@ namespace Ledge.App.Services;
 
 using System.Windows.Threading;
 using System.Runtime.InteropServices;
+using System.Text;
 using Ledge.Native.Interop;
 
 public sealed class FullscreenDetector : IDisposable
@@ -43,6 +44,7 @@ public sealed class FullscreenDetector : IDisposable
     private bool IsFullscreen(nint hwnd)
     {
         if (hwnd == nint.Zero) return false;
+        if (IsDesktopShell(hwnd)) return false;
 
         User32.GetWindowRect(hwnd, out var rect);
         var monitor = User32.MonitorFromWindow(hwnd, User32.MONITOR_DEFAULTTONEAREST);
@@ -58,6 +60,13 @@ public sealed class FullscreenDetector : IDisposable
                rect.Right >= info.rcMonitor.Right &&
                rect.Bottom >= info.rcMonitor.Bottom &&
                !hasCaption;
+    }
+
+    private static bool IsDesktopShell(nint hwnd)
+    {
+        var className = new StringBuilder(256);
+        var length = User32.GetClassName(hwnd, className, className.Capacity);
+        return length > 0 && (className.ToString() is "Progman" or "WorkerW");
     }
 
     public void Dispose()
